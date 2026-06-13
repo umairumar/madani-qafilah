@@ -1,4 +1,5 @@
 import { useState } from "react";
+import ExpenseManager from "./ExpenseManager";
 
 // ─── ISLAMIC MONTHS ──────────────────────────────────────────────────────────
 const ISLAMIC_MONTHS = [
@@ -367,7 +368,7 @@ export default function App() {
 
           {/* Tabs */}
           <div style={{ display: "flex", marginTop: 10 }}>
-            {[["schedule","📋 Schedule"],["sunnahs","📿 Sunnahs"],["duas","🤲 Du'as"],["salah","🙏 Salah Laws"]].map(([id, label]) => (
+            {[["schedule","📋 Schedule"],["sunnahs","📿 Sunnahs"],["duas","🤲 Du'as"],["salah","🙏 Salah Laws"],["expenses","💰 Expenses"]].map(([id, label]) => (
               <button key={id} onClick={() => setTab(id)}
                 style={{ flex: 1, padding: "9px 2px", border: "none",
                   borderBottom: tab === id ? "2px solid #d4af7a" : "2px solid transparent",
@@ -581,6 +582,17 @@ export default function App() {
                 <div style={{ fontSize: 10, color: "#4a5a7a", background: "#0d1420", borderRadius: 5, padding: "3px 8px", display: "inline-block" }}>📖 {s.ref}</div>
               </div>
             ))}
+          </div>
+        )}
+
+        {/* ── EXPENSES TAB ── */}
+        {tab === "expenses" && (
+          <div>
+            <div style={{ background: "linear-gradient(135deg,#1a2a1a,#0d1a0d)", borderRadius: 12, padding: "12px 14px", marginBottom: 14, border: "1px solid #2a3a2a" }}>
+              <div style={{ fontSize: 12, fontWeight: 700, color: "#7fd4a0", marginBottom: 2 }}>💰 Qafilah Expense Manager</div>
+              <div style={{ fontSize: 11, color: "#8899aa" }}>Track shared expenses, set custom contributions per brother, and calculate who owes who. Works fully offline.</div>
+            </div>
+            <ExpenseManager />
           </div>
         )}
 
