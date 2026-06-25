@@ -18,6 +18,8 @@ import {
   monthDayKey,
 } from "./storage";
 import { buildReportSummary, generateReportPdf } from "./generateReportPdf";
+import LegalPage from "./LegalPage";
+import { privacyPolicy, termsAndConditions } from "./legalContent";
 
 const inputStyle = {
   width: "100%",
@@ -79,6 +81,29 @@ export default function App() {
   const [journey, setJourney] = useState(() => ({ ...DEFAULT_JOURNEY, ...load(STORAGE_KEYS.JOURNEY, {}) }));
   const [brothers, setBrothers] = useState(() => load(STORAGE_KEYS.BROTHERS, []));
   const [showMonthPicker, setShowMonthPicker] = useState(false);
+  const [legalView, setLegalView] = useState(null);
+
+  useEffect(() => {
+    const readHash = () => {
+      const hash = window.location.hash.replace("#", "");
+      if (hash === "privacy") setLegalView("privacy");
+      else if (hash === "terms") setLegalView("terms");
+      else setLegalView(null);
+    };
+    readHash();
+    window.addEventListener("hashchange", readHash);
+    return () => window.removeEventListener("hashchange", readHash);
+  }, []);
+
+  const openLegal = (view) => {
+    window.location.hash = view;
+    setLegalView(view);
+  };
+
+  const closeLegal = () => {
+    history.replaceState(null, "", window.location.pathname + window.location.search);
+    setLegalView(null);
+  };
 
   useEffect(() => { save(STORAGE_KEYS.CHECKLIST, checkedItems); }, [checkedItems]);
   useEffect(() => { save(STORAGE_KEYS.SUNNAHS_DONE, sunnahsDone); }, [sunnahsDone]);
@@ -609,11 +634,24 @@ export default function App() {
           </div>
         )}
 
-        <div style={{ textAlign: "center", marginTop: 18, fontSize: 10, color: "#334", lineHeight: 1.7 }}>
+        <div style={{ textAlign: "center", marginTop: 18, fontSize: 10, color: "#556", lineHeight: 1.9 }}>
           Based on "Path to Piety" (Nayk Bannay aur Bananay kay Tareeqay)<br />
           Majlis Madani Qafilah & Al-Madina-tul-'Ilmiyyah · Dawat-e-Islami
+          <div style={{ marginTop: 10, display: "flex", justifyContent: "center", gap: 16, flexWrap: "wrap" }}>
+            <button type="button" onClick={() => openLegal("terms")}
+              style={{ background: "none", border: "none", color: "#8899aa", cursor: "pointer", fontSize: 10, textDecoration: "underline", padding: 0 }}>
+              Terms & Conditions
+            </button>
+            <button type="button" onClick={() => openLegal("privacy")}
+              style={{ background: "none", border: "none", color: "#8899aa", cursor: "pointer", fontSize: 10, textDecoration: "underline", padding: 0 }}>
+              Privacy Policy
+            </button>
+          </div>
         </div>
       </div>
+
+      {legalView === "privacy" && <LegalPage document={privacyPolicy} onClose={closeLegal} />}
+      {legalView === "terms" && <LegalPage document={termsAndConditions} onClose={closeLegal} />}
     </div>
   );
 }
