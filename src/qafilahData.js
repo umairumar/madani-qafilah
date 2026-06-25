@@ -200,55 +200,55 @@ export const MONTHLY_SALAH_LAWS = {
   ],
   "Zul-Hijja-til-Haraam": [
     { day: 1, topic: "Method of Purifying Clothes with Account of Impurities", ref: "pp.21-33" },
-    { day: 2, topic: "Salah practiced practically â€” Faraaid of Wudu and Ghusl", ref: "pp.103-109, p.8, pp.55-56" },
+    { day: 2, topic: "Salah practiced practically — Faraaid of Wudu and Ghusl", ref: "pp.103-109, p.8, pp.55-56" },
     { day: 3, topic: "8 Madani pearls of Takbeer-e-Tashreeq and method of offering Eid Salah", ref: "pp.252-253, pp.246-247" },
   ],
 };
 
 // â”€â”€â”€ SCHEDULE â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export const SCHEDULE = [
-  { id: "tahajjud", time: "Pre-Fajr", label: "Tahajjud & Preparation", icon: "ðŸŒ™", activities: [
+  { id: "tahajjud", time: "Pre-Fajr", label: "Tahajjud & Preparation", icon: "🌙", activities: [
     { time: "19 min before Subh-e-Sadiq", task: "Wake up & offer Salat-ut-Tahajjud", type: "salah" },
     { time: "Before Fajr Azan", task: "Brothers going to nearby Masajid for Dars should leave", type: "travel" },
     { time: "After Fajr Azan", task: "Call out Sada-e-Madinah (wake-up call for Fajr)", type: "action" },
   ]},
-  { id: "fajr", time: "Fajr", label: "Fajr Salah & Halqah", icon: "ðŸ•Œ", activities: [
-    { time: "After Fajr Salah", task: "Bayan (7â€“12 min): Zikrullah / Bismillah / Quran / Salat-Alan-Nabi", type: "bayan" },
+  { id: "fajr", time: "Fajr", label: "Fajr Salah & Halqah", icon: "🕌", activities: [
+    { time: "After Fajr Salah", task: "Bayan (7–12 min): Zikrullah / Bismillah / Quran / Salat-Alan-Nabi", type: "bayan" },
     { time: "Fajr Halqah", task: "Quran recitation with translation & commentary (Madani In'aam no. 21)", type: "learning" },
     { time: "Fajr Halqah", task: "Study Faizan-e-Sunnat passage", type: "learning" },
     { time: "Fajr Halqah", task: "Revision of previously learned Sunnahs & Du'as", type: "learning" },
   ]},
-  { id: "morning", time: "9:30 AM", label: "Morning Sessions", icon: "â˜€ï¸", activities: [
-    { time: "9:30â€“9:56 AM", task: "Mashwarah (26 min): 5 min Quran & Na'at, then schedule revision & In'amaat booklet distribution", type: "admin" },
-    { time: "9:56â€“10:37 AM", task: "Bayan on Madani Mission (41 min): 26 min speech + 15 min mindset on 12 Madani tasks", type: "bayan" },
-    { time: "10:37â€“10:56 AM", task: "Individual Worship (19 min): Quran, Zikr, Salat-Alan-Nabi, study In'amaat schedule", type: "ibadah" },
-    { time: "10:56â€“11:08 AM", task: "Memorise short invitation towards righteousness (12 min)", type: "learning" },
-    { time: "11:08â€“11:20 AM", task: "Method of Individual Effort (12 min) â€” Ameer demonstrates practically", type: "learning" },
-    { time: "11:20 AMâ€“12:00 PM", task: "Individual Effort (40 min): Go out to invite people to Masjid", type: "action" },
+  { id: "morning", time: "9:30 AM", label: "Morning Sessions", icon: "☀️", activities: [
+    { time: "9:30–9:56 AM", task: "Mashwarah (26 min): 5 min Quran & Na'at, then schedule revision & In'amaat booklet distribution", type: "admin" },
+    { time: "9:56–10:37 AM", task: "Bayan on Madani Mission (41 min): 26 min speech + 15 min mindset on 12 Madani tasks", type: "bayan" },
+    { time: "10:37–10:56 AM", task: "Individual Worship (19 min): Quran, Zikr, Salat-Alan-Nabi, study In'amaat schedule", type: "ibadah" },
+    { time: "10:56–11:08 AM", task: "Memorise short invitation towards righteousness (12 min)", type: "learning" },
+    { time: "11:08–11:20 AM", task: "Method of Individual Effort (12 min) — Ameer demonstrates practically", type: "learning" },
+    { time: "11:20 AM–12:00 PM", task: "Individual Effort (40 min): Go out to invite people to Masjid", type: "action" },
   ]},
-  { id: "zuhr", time: "Zuhr", label: "Zuhr & Afternoon", icon: "ðŸŒ¤ï¸", activities: [
-    { time: "12:00â€“12:30 PM", task: "Sunnah learning session (see Sunnahs tab for this month's topics)", type: "learning" },
+  { id: "zuhr", time: "Zuhr", label: "Zuhr & Afternoon", icon: "🌤️", activities: [
+    { time: "12:00–12:30 PM", task: "Sunnah learning session (see Sunnahs tab for this month's topics)", type: "learning" },
     { time: "12 min before Zuhr Azan", task: "Chowk Dars (7 min) from Faizan-e-Sunnat at the square", type: "action" },
     { time: "After Zuhr Salah", task: "Madani Dars (7 min) from Faizan-e-Sunnat", type: "dars" },
-    { time: "After Zuhr Dars", task: "Laws of Salah session (30 min) â€” see Sunnahs tab for this month's topics", type: "learning" },
+    { time: "After Zuhr Dars", task: "Laws of Salah session (30 min) — see Sunnahs tab for this month's topics", type: "learning" },
     { time: "Afternoon", task: "Method of delivering Madani Dars & Bayan (19 min)", type: "learning" },
-    { time: "Summer: now / Winter: after Isha", task: "Memorising Du'as session (19 min) â€” see Du'as tab for this month's topics", type: "learning" },
+    { time: "Summer: now / Winter: after Isha", task: "Memorising Du'as session (19 min) — see Du'as tab for this month's topics", type: "learning" },
     { time: "Rest Break", task: "Rest until Asr Salah", type: "rest" },
   ]},
-  { id: "asr", time: "Asr", label: "Asr & Madani Visit", icon: "ðŸ•Œ", activities: [
+  { id: "asr", time: "Asr", label: "Asr & Madani Visit", icon: "🕌", activities: [
     { time: "After Asr Salah", task: "Announcement & Bayan (12 min): Virtues of calling towards righteousness", type: "bayan" },
     { time: "After Asr Bayan", task: "Madani Visit (door-to-door invitation)", type: "action" },
     { time: "Between Asr & Maghrib", task: "Madani Dars from Faizan-e-Sunnat & Bayanaat-e-Attariyyah + Sunnah revision", type: "dars" },
   ]},
-  { id: "maghrib", time: "Maghrib", label: "Maghrib Bayan & Dinner", icon: "ðŸŒ†", activities: [
-    { time: "After Maghrib Salah", task: "Bayan by efficient Muballigh (topic varies by day â€” see Schedule tab)", type: "bayan" },
+  { id: "maghrib", time: "Maghrib", label: "Maghrib Bayan & Dinner", icon: "🌆", activities: [
+    { time: "After Maghrib Salah", task: "Bayan by efficient Muballigh (topic varies by day — see Schedule tab)", type: "bayan" },
     { time: "After Bayan", task: "Individual effort for 12 minutes", type: "action" },
     { time: "Between Maghrib & Isha", task: "Dinner", type: "rest" },
   ]},
-  { id: "isha", time: "Isha", label: "Isha & Night Session", icon: "ðŸŒƒ", activities: [
+  { id: "isha", time: "Isha", label: "Isha & Night Session", icon: "🌃", activities: [
     { time: "After Isha Salah", task: "Madani Dars (7 min) from Faizan-e-Sunnat", type: "dars" },
     { time: "After Dars", task: "7 min Individual effort, then Cassette/CD Bayan (or read booklet aloud)", type: "bayan" },
-    { time: "Winter only", task: "Memorising Du'as session (19 min) â€” in summer held at midday", type: "learning" },
+    { time: "Winter only", task: "Memorising Du'as session (19 min) — in summer held at midday", type: "learning" },
     { time: "Night", task: "Revision: Ameer revises day's learning; volunteers recite", type: "learning" },
     { time: "Before Sleep", task: "Collective Fikr-e-Madinah, Salat-ut-Taubah, listen to Surah Al-Mulk", type: "ibadah" },
   ]},
@@ -268,7 +268,7 @@ export const typeLabels = {
 export const DAY_GUIDES = {
   3: [
     { day: 1, maghrib: "Importance of travelling in the path of Allah & virtues of intentions" },
-    { day: 2, maghrib: "Persuade participants to present names for the next Qafilah â€” record them" },
+    { day: 2, maghrib: "Persuade participants to present names for the next Qafilah — record them" },
     { day: 3, maghrib: "Sacrifices of pious predecessors & motivation for next Qafilah. Also: Bayan after Maghrib and Dars after Isha" },
   ],
 };
