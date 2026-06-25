@@ -21,6 +21,7 @@ import {
   RESET_EVENT,
 } from "./storage";
 import { buildReportSummary, generateReportPdf } from "./generateReportPdf";
+import { generateJourneyPdf } from "./generateJourneyPdf";
 import LegalPage from "./LegalPage";
 import { privacyPolicy, termsAndConditions } from "./legalContent";
 
@@ -229,6 +230,19 @@ export default function App() {
     journey.fromCity.trim() &&
     journey.toCity.trim() &&
     brothers.length > 0;
+
+  const canDownloadJourneyPdf =
+    journey.fromCity.trim() &&
+    journey.toCity.trim();
+
+  const handleDownloadJourneyPdf = () => {
+    generateJourneyPdf({
+      journey,
+      brothers,
+      qafilaType,
+      selectedMonth,
+    });
+  };
 
   const handleDownloadReport = () => {
     generateReportPdf({
@@ -499,6 +513,36 @@ export default function App() {
                   <input type="date" value={journey.endDate} onChange={(e) => updateJourney("endDate", e.target.value)} style={inputStyle} />
                 </div>
               </div>
+            </div>
+
+            <div style={{ background: "#141420", borderRadius: 12, padding: "14px", marginTop: 14, border: "1px solid #2a2a3a" }}>
+              <div style={{ fontSize: 12, fontWeight: 700, color: "#d4af7a", marginBottom: 4 }}>📄 Share Journey PDF</div>
+              <div style={{ fontSize: 11, color: "#8899aa", marginBottom: 12, lineHeight: 1.5 }}>
+                Download a designed one-page PDF with route, venue, dates, Ameer contact, and brothers — ready to share on WhatsApp.
+              </div>
+              {!canDownloadJourneyPdf && (
+                <div style={{ fontSize: 11, color: "#8899aa", marginBottom: 10, lineHeight: 1.5 }}>
+                  Fill in <strong style={{ color: "#c8d0dc" }}>from city</strong> and <strong style={{ color: "#c8d0dc" }}>to city</strong> above to enable download.
+                </div>
+              )}
+              <button
+                type="button"
+                onClick={handleDownloadJourneyPdf}
+                disabled={!canDownloadJourneyPdf}
+                style={{
+                  width: "100%",
+                  background: canDownloadJourneyPdf ? "#d4af7a" : "#3a3a4a",
+                  border: "none",
+                  borderRadius: 8,
+                  padding: "12px",
+                  color: canDownloadJourneyPdf ? "#1a1a2e" : "#8899aa",
+                  fontWeight: 700,
+                  cursor: canDownloadJourneyPdf ? "pointer" : "not-allowed",
+                  fontSize: 13,
+                }}
+              >
+                ⬇ Download Journey PDF
+              </button>
             </div>
 
             <div style={{ background: "#1a1010", borderRadius: 12, padding: "14px", marginTop: 14, border: "1px solid #4a2a2a" }}>
