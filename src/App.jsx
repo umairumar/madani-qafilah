@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import ExpenseManager from "./ExpenseManager";
 import {
   ISLAMIC_MONTHS,
@@ -82,6 +82,11 @@ export default function App() {
   const [brothers, setBrothers] = useState(() => load(STORAGE_KEYS.BROTHERS, []));
   const [showMonthPicker, setShowMonthPicker] = useState(false);
   const [legalView, setLegalView] = useState(null);
+  const tabsScrollRef = useRef(null);
+
+  const scrollTabs = (direction) => {
+    tabsScrollRef.current?.scrollBy({ left: direction * 160, behavior: "smooth" });
+  };
 
   useEffect(() => {
     const readHash = () => {
@@ -104,6 +109,13 @@ export default function App() {
     history.replaceState(null, "", window.location.pathname + window.location.search);
     setLegalView(null);
   };
+
+  useEffect(() => {
+    const el = tabsScrollRef.current;
+    if (!el) return;
+    const active = el.querySelector(`[data-tab-id="${tab}"]`);
+    active?.scrollIntoView({ behavior: "smooth", inline: "nearest", block: "nearest" });
+  }, [tab]);
 
   useEffect(() => { save(STORAGE_KEYS.CHECKLIST, checkedItems); }, [checkedItems]);
   useEffect(() => { save(STORAGE_KEYS.SUNNAHS_DONE, sunnahsDone); }, [sunnahsDone]);
@@ -265,16 +277,81 @@ export default function App() {
           </div>
 
           {/* Tabs */}
-          <div style={{ display: "flex", marginTop: 10, overflowX: "auto" }}>
-            {mainTabs.map(([id, label]) => (
-              <button key={id} onClick={() => { setTab(id); setBrothers(load(STORAGE_KEYS.BROTHERS, [])); }}
-                style={{ flex: "1 0 auto", padding: "9px 4px", border: "none", minWidth: 52,
-                  borderBottom: tab === id ? "2px solid #d4af7a" : "2px solid transparent",
-                  background: "transparent", color: tab === id ? "#d4af7a" : "#8899aa",
-                  cursor: "pointer", fontSize: 9, fontWeight: tab === id ? 700 : 400 }}>
-                {label}
-              </button>
-            ))}
+          <div style={{ display: "flex", alignItems: "stretch", marginTop: 10, gap: 4 }}>
+            <button
+              type="button"
+              onClick={() => scrollTabs(-1)}
+              aria-label="Scroll tabs left"
+              style={{
+                flexShrink: 0,
+                width: 32,
+                border: "1px solid #2a2a4a",
+                borderRadius: 8,
+                background: "#1a1a2e",
+                color: "#d4af7a",
+                cursor: "pointer",
+                fontSize: 12,
+                padding: 0,
+              }}
+            >
+              ◀
+            </button>
+
+            <div
+              ref={tabsScrollRef}
+              className="tab-scroll"
+              style={{
+                flex: 1,
+                display: "flex",
+                overflowX: "auto",
+                overflowY: "hidden",
+                scrollBehavior: "smooth",
+                WebkitOverflowScrolling: "touch",
+                borderBottom: "1px solid #2a2a3a",
+              }}
+            >
+              {mainTabs.map(([id, label]) => (
+                <button
+                  key={id}
+                  type="button"
+                  data-tab-id={id}
+                  onClick={() => { setTab(id); setBrothers(load(STORAGE_KEYS.BROTHERS, [])); }}
+                  style={{
+                    flex: "0 0 auto",
+                    padding: "10px 14px",
+                    border: "none",
+                    whiteSpace: "nowrap",
+                    borderBottom: tab === id ? "2px solid #d4af7a" : "2px solid transparent",
+                    background: "transparent",
+                    color: tab === id ? "#d4af7a" : "#8899aa",
+                    cursor: "pointer",
+                    fontSize: 12,
+                    fontWeight: tab === id ? 700 : 500,
+                  }}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+
+            <button
+              type="button"
+              onClick={() => scrollTabs(1)}
+              aria-label="Scroll tabs right"
+              style={{
+                flexShrink: 0,
+                width: 32,
+                border: "1px solid #2a2a4a",
+                borderRadius: 8,
+                background: "#1a1a2e",
+                color: "#d4af7a",
+                cursor: "pointer",
+                fontSize: 12,
+                padding: 0,
+              }}
+            >
+              ▶
+            </button>
           </div>
         </div>
       </div>
