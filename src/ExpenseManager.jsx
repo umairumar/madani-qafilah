@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { STORAGE_KEYS, load, save, clearExpensesOnly, RESET_EVENT } from "./storage";
 import { computeExpenseSummary, CAT_LABELS } from "./expenseUtils";
+import { generateExpensesPdf } from "./generateExpensesPdf";
 
 const CAT_COLORS = {
   food: { bg: "#EAF3DE", color: "#27500A", label: CAT_LABELS.food },
@@ -92,6 +93,18 @@ export default function ExpenseManager() {
     setSettleResult(result);
   };
 
+  const canDownloadExpensesPdf = brothers.length > 0 && expenses.length > 0;
+
+  const handleDownloadExpensesPdf = () => {
+    const journey = load(STORAGE_KEYS.JOURNEY, {});
+    generateExpensesPdf({
+      journey,
+      brothers,
+      expenses,
+      contributions,
+    });
+  };
+
   const resetExpenses = () => {
     if (!expenses.length) return;
     if (!window.confirm("Delete all expense records? Journey and schedule progress will be kept.")) return;
@@ -112,6 +125,36 @@ export default function ExpenseManager() {
 
   return (
     <div style={s}>
+      <div style={{ background: "#141420", borderRadius: 12, padding: "14px", marginBottom: 14, border: "1px solid #2a2a3a" }}>
+        <div style={{ fontSize: 12, fontWeight: 700, color: "#d4af7a", marginBottom: 4 }}>📄 Share Expenses PDF</div>
+        <div style={{ fontSize: 11, color: "#8899aa", marginBottom: 12, lineHeight: 1.5 }}>
+          Download a designed PDF with the expense log, category breakdown, per-brother balances, and who owes whom — ready to share on WhatsApp.
+        </div>
+        {!canDownloadExpensesPdf && (
+          <div style={{ fontSize: 11, color: "#8899aa", marginBottom: 10, lineHeight: 1.5 }}>
+            Add at least one <strong style={{ color: "#c8d0dc" }}>brother</strong> and one <strong style={{ color: "#c8d0dc" }}>expense</strong> to enable download.
+          </div>
+        )}
+        <button
+          type="button"
+          onClick={handleDownloadExpensesPdf}
+          disabled={!canDownloadExpensesPdf}
+          style={{
+            width: "100%",
+            background: canDownloadExpensesPdf ? "#d4af7a" : "#3a3a4a",
+            border: "none",
+            borderRadius: 8,
+            padding: "12px",
+            color: canDownloadExpensesPdf ? "#1a1a2e" : "#8899aa",
+            fontWeight: 700,
+            cursor: canDownloadExpensesPdf ? "pointer" : "not-allowed",
+            fontSize: 13,
+          }}
+        >
+          ⬇ Download Expenses PDF
+        </button>
+      </div>
+
       {/* Sub-tabs */}
       <div style={{ display: "flex", borderBottom: "1px solid #2a2a3a", marginBottom: 14 }}>
         {tabs.map(t => (
