@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { STORAGE_KEYS, load, save } from "./storage";
 
 const CAT_COLORS = {
   food: { bg: "#EAF3DE", color: "#27500A", label: "Food" },
@@ -8,23 +9,11 @@ const CAT_COLORS = {
   other: { bg: "#FAEEDA", color: "#633806", label: "Other" },
 };
 
-const STORAGE_KEY_B = "qf_brothers";
-const STORAGE_KEY_E = "qf_expenses";
-const STORAGE_KEY_N = "qf_name";
-
-function load(key, fallback) {
-  try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : fallback; }
-  catch { return fallback; }
-}
-function save(key, val) {
-  try { localStorage.setItem(key, JSON.stringify(val)); } catch {}
-}
-
 export default function ExpenseManager() {
   const [tab, setTab] = useState("brothers");
-  const [qafilaName, setQafilaName] = useState(() => load(STORAGE_KEY_N, ""));
-  const [brothers, setBrothers] = useState(() => load(STORAGE_KEY_B, []));
-  const [expenses, setExpenses] = useState(() => load(STORAGE_KEY_E, []));
+  const [qafilaName, setQafilaName] = useState(() => load(STORAGE_KEYS.NAME, ""));
+  const [brothers, setBrothers] = useState(() => load(STORAGE_KEYS.BROTHERS, []));
+  const [expenses, setExpenses] = useState(() => load(STORAGE_KEYS.EXPENSES, []));
   const [brotherInput, setBrotherInput] = useState("");
 
   const [expDesc, setExpDesc] = useState("");
@@ -37,9 +26,9 @@ export default function ExpenseManager() {
   const [contributions, setContributions] = useState({});
   const [settleResult, setSettleResult] = useState(null);
 
-  useEffect(() => { save(STORAGE_KEY_B, brothers); }, [brothers]);
-  useEffect(() => { save(STORAGE_KEY_E, expenses); }, [expenses]);
-  useEffect(() => { save(STORAGE_KEY_N, qafilaName); }, [qafilaName]);
+  useEffect(() => { save(STORAGE_KEYS.BROTHERS, brothers); }, [brothers]);
+  useEffect(() => { save(STORAGE_KEYS.EXPENSES, expenses); }, [expenses]);
+  useEffect(() => { save(STORAGE_KEYS.NAME, qafilaName); }, [qafilaName]);
 
   const addBrother = () => {
     const name = brotherInput.trim();

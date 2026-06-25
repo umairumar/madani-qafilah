@@ -1,281 +1,69 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import ExpenseManager from "./ExpenseManager";
+import {
+  ISLAMIC_MONTHS,
+  MONTHLY_SUNNAHS,
+  MONTHLY_DUAS,
+  MONTHLY_SALAH_LAWS,
+  SCHEDULE,
+  typeColors,
+  typeLabels,
+  DAY_GUIDES,
+} from "./qafilahData";
+import {
+  STORAGE_KEYS,
+  DEFAULT_JOURNEY,
+  load,
+  save,
+  monthDayKey,
+} from "./storage";
+import { buildReportSummary, generateReportPdf } from "./generateReportPdf";
 
-// ─── ISLAMIC MONTHS ──────────────────────────────────────────────────────────
-const ISLAMIC_MONTHS = [
-  "Muharram-ul-Haraam",
-  "Safar-ul-Muzaffar",
-  "Rabi-ul-Awwal",
-  "Rabi-ul-Aakhir",
-  "Jumadal Awwal",
-  "Jumadal Aakhir",
-  "Rajab-ul-Murajjab",
-  "Sha'ban-ul-Mu'azzam",
-  "Ramadan-ul-Mubarak",
-  "Shawwal-ul-Mukarram",
-  "Zul-Qa'da-til-Haraam",
-  "Zul-Hijja-til-Haraam",
-];
-
-// ─── MONTHLY SUNNAH SCHEDULE (3-day Qafilah, 12 Islamic months) ──────────────
-const MONTHLY_SUNNAHS = {
-  "Muharram-ul-Haraam": [
-    { day: 1, topic: "Sunnahs and manners of participating in the funeral procession and shouldering the bier", ref: "Laws of Salah, p.219" },
-    { day: 2, topic: "Sunnahs and manners of entering the graveyard", ref: "p.443 of this book" },
-    { day: 3, topic: "Sunnahs and manners of throwing a handful of earth onto the grave", ref: "Laws of Salah, p.267" },
-  ],
-  "Safar-ul-Muzaffar": [
-    { day: 1, topic: "Sunnahs and manners of purification after excretion (Istinja)", ref: "p.446 of this book" },
-    { day: 2, topic: "Sunnahs and manners of hair-cut and removing pubic hair", ref: "p.397 of this book" },
-    { day: 3, topic: "Sunnahs and manners of wearing the 'Imamah (Islamic turban)", ref: "p.434 of this book" },
-  ],
-  "Rabi-ul-Awwal": [
-    { day: 1, topic: "Sunnahs and manners of wearing clothes", ref: "p.431 of this book" },
-    { day: 2, topic: "Sunnahs and manners of applying kohl (Surmah)", ref: "p.391 of this book" },
-    { day: 3, topic: "Sunnahs and manners of embracing one another", ref: "p.367 of this book" },
-  ],
-  "Rabi-ul-Aakhir": [
-    { day: 1, topic: "Sunnahs and manners of applying fragrance ('Itr)", ref: "p.412 of this book" },
-    { day: 2, topic: "Sunnahs and manners of applying oil and combing", ref: "p.406 of this book" },
-    { day: 3, topic: "Sunnahs and manners of clipping nails", ref: "p.400 of this book" },
-  ],
-  "Jumadal Awwal": [
-    { day: 1, topic: "Sunnahs and manners of drinking water", ref: "p.422 of this book" },
-    { day: 2, topic: "Sunnahs and manners of entering the Masjid", ref: "p.41 of this book" },
-    { day: 3, topic: "Manners and Madani pearls of sitting in the Masjid", ref: "p.43 of this book" },
-  ],
-  "Jumadal Aakhir": [
-    { day: 1, topic: "Sunnahs and manners of sitting in a congregation or gathering", ref: "p.429 of this book" },
-    { day: 2, topic: "Sunnahs and manners of walking", ref: "p.426 of this book" },
-    { day: 3, topic: "Sunnahs and manners of shaking hands", ref: "p.371 of this book" },
-  ],
-  "Rajab-ul-Murajjab": [
-    { day: 1, topic: "Sunnahs and manners of hospitality", ref: "p.452 of this book" },
-    { day: 2, topic: "Sunnahs and manners of adorning oneself", ref: "p.410 of this book" },
-    { day: 3, topic: "Sunnahs and manners of sneezing", ref: "p.394 of this book" },
-  ],
-  "Sha'ban-ul-Mu'azzam": [
-    { day: 1, topic: "Method and Madani pearls of performing Tayammum", ref: "Laws of Salah, p.71" },
-    { day: 2, topic: "Sunnahs and manners of keeping Sunnah-conforming hairstyle", ref: "p.402 of this book" },
-    { day: 3, topic: "Sunnahs and manners of talking", ref: "p.373 of this book" },
-  ],
-  "Ramadan-ul-Mubarak": [
-    { day: 1, topic: "Sunnahs and manners of eating meal", ref: "p.417 of this book" },
-    { day: 2, topic: "Sunnahs and manners of saying Salam", ref: "p.358 of this book" },
-    { day: 3, topic: "Sunnahs and manners of using Miswak", ref: "p.441 of this book" },
-  ],
-  "Shawwal-ul-Mukarram": [
-    { day: 1, topic: "Sunnahs and manners of travelling", ref: "p.383 of this book" },
-    { day: 2, topic: "Sunnahs and manners of entering and leaving home", ref: "p.376 of this book" },
-    { day: 3, topic: "Sunnahs and manners of wearing shoes", ref: "p.436 of this book" },
-  ],
-  "Zul-Qa'da-til-Haraam": [
-    { day: 1, topic: "Sunnahs and manners of sleeping", ref: "p.438 of this book" },
-    { day: 2, topic: "Sunnahs and manners of applying oil", ref: "p.406 of this book" },
-    { day: 3, topic: "Sunnahs and manners of applying kohl (Surmah)", ref: "p.391 of this book" },
-  ],
-  "Zul-Hijja-til-Haraam": [
-    { day: 1, topic: "Sunnahs and manners of hair-cut and removing pubic hair", ref: "p.397 of this book" },
-    { day: 2, topic: "Sunnahs and manners of hospitality", ref: "p.452 of this book" },
-    { day: 3, topic: "Sunnahs and manners of sitting", ref: "p.429 of this book" },
-  ],
+const inputStyle = {
+  width: "100%",
+  background: "#141420",
+  border: "1px solid #2a2a3a",
+  borderRadius: 8,
+  padding: "8px 12px",
+  color: "#e6e6e6",
+  fontSize: 12,
+  boxSizing: "border-box",
 };
 
-// ─── MONTHLY DUA SCHEDULE (3-day Qafilah, 12 Islamic months) ─────────────────
-const MONTHLY_DUAS = {
-  "Muharram-ul-Haraam": [
-    { day: 1, dua: "Du'a when looking at a funeral", page: 343 },
-    { day: 2, dua: "Du'a when entering the graveyard", page: 343 },
-    { day: 3, dua: "Du'a when putting soil onto the grave", page: 343 },
-  ],
-  "Safar-ul-Muzaffar": [
-    { day: 1, dua: "Du'a for entering the toilet", page: 343 },
-    { day: 2, dua: "Du'a after exiting the toilet", page: 344 },
-    { day: 3, dua: "An act for protection from Satan", page: 344 },
-  ],
-  "Rabi-ul-Awwal": [
-    { day: 1, dua: "Du'a when putting on clothing", page: 344 },
-    { day: 2, dua: "Du'a when applying kohl", page: 345 },
-    { day: 3, dua: "Du'a upon seeing a Muslim smiling", page: 345 },
-  ],
-  "Rabi-ul-Aakhir": [
-    { day: 1, dua: "Du'a for the one offering 'Itr (fragrance)", page: 345 },
-    { day: 2, dua: "Third holy Kalimah", page: 355 },
-    { day: 3, dua: "Iman-e-Mufassal", page: 354 },
-  ],
-  "Jumadal Awwal": [
-    { day: 1, dua: "Du'a when drinking Zamzam water", page: 345 },
-    { day: 2, dua: "Du'a when entering the Masjid", page: 345 },
-    { day: 3, dua: "Du'a when leaving the Masjid", page: 346 },
-  ],
-  "Jumadal Aakhir": [
-    { day: 1, dua: "Du'a at the end of a Majlis (gathering)", page: 346 },
-    { day: 2, dua: "Du'a when entering the marketplace", page: 346 },
-    { day: 3, dua: "Du'a to earn profit and prevent loss in the market", page: 347 },
-  ],
-  "Rajab-ul-Murajjab": [
-    { day: 1, dua: "Du'a when someone feeds you", page: 348 },
-    { day: 2, dua: "Du'a when looking in a mirror", page: 348 },
-    { day: 3, dua: "Du'a for the one who replies to a sneeze", page: 349 },
-  ],
-  "Sha'ban-ul-Mu'azzam": [
-    { day: 1, dua: "Du'a for paying off debt", page: 349 },
-    { day: 2, dua: "Iman-e-Mujmal", page: 354 },
-    { day: 3, dua: "Du'a to prevent from backbiting", page: 349 },
-  ],
-  "Ramadan-ul-Mubarak": [
-    { day: 1, dua: "Du'a before eating", page: 347 },
-    { day: 2, dua: "Du'a after eating", page: 348 },
-    { day: 3, dua: "Du'a after drinking milk", page: 350 },
-  ],
-  "Shawwal-ul-Mukarram": [
-    { day: 1, dua: "Du'a for getting on a vehicle", page: 350 },
-    { day: 2, dua: "Du'a when exiting home", page: 351 },
-    { day: 3, dua: "Du'a when entering the home", page: 350 },
-  ],
-  "Zul-Qa'da-til-Haraam": [
-    { day: 1, dua: "Du'a before sleeping", page: 351 },
-    { day: 2, dua: "Du'a after waking up from sleep", page: 351 },
-    { day: 3, dua: "Du'a when visiting an ailing person", page: 352 },
-  ],
-  "Zul-Hijja-til-Haraam": [
-    { day: 1, dua: "Du'a on a burn injury", page: 351 },
-    { day: 2, dua: "Du'a for protection from snakes and scorpions", page: 352 },
-    { day: 3, dua: "Du'a in extreme danger", page: 352 },
-  ],
-};
+function CompletionCheckbox({ isDone, onToggle, size = 18 }) {
+  return (
+    <div
+      onClick={(e) => { e.stopPropagation(); onToggle(); }}
+      style={{
+        width: size,
+        height: size,
+        borderRadius: 5,
+        border: `2px solid ${isDone ? "#4a8" : "#334"}`,
+        background: isDone ? "#2d6b4a" : "transparent",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        flexShrink: 0,
+        cursor: "pointer",
+      }}
+    >
+      {isDone && <span style={{ color: "#7fd4a0", fontSize: 11 }}>✓</span>}
+    </div>
+  );
+}
 
-// ─── LAWS OF SALAH SCHEDULE (3-day monthly) ───────────────────────────────────
-const MONTHLY_SALAH_LAWS = {
-  "Muharram-ul-Haraam": [
-    { day: 1, topic: "Method of Wudu, Faraaid of Wudu and Sunan of Wudu", ref: "Laws of Salah, pp.5-9" },
-    { day: 2, topic: "Method of Ghusl and the Faraaid of Ghusl", ref: "pp.54-56" },
-    { day: 3, topic: "Sunan and Faraaid of Tayammum (dry ablution) and the method of Tayammum", ref: "pp.70-72" },
-  ],
-  "Safar-ul-Muzaffar": [
-    { day: 1, topic: "Preconditions of Salah", ref: "pp.110-115" },
-    { day: 2, topic: "Faraaid and the practical method of offering Salah", ref: "pp.115-125" },
-    { day: 3, topic: "9 Madani pearls about Salah of Witr, method of Sajdah Sahw, Sajdah Tilawat and Sajdah Shukr", ref: "pp.161-169" },
-  ],
-  "Rabi-ul-Awwal": [
-    { day: 1, topic: "Funeral Salah (Fard-e-Kifayah), essentials and method of funeral Salah", ref: "pp.214-219" },
-    { day: 2, topic: "Distance of Shari journey and minimum distance for becoming a Musafir", ref: "pp.174-182" },
-    { day: 3, topic: "Method of ritually bathing the deceased, burial and shrouding", ref: "pp.264-268" },
-  ],
-  "Rabi-ul-Aakhir": [
-    { day: 1, topic: "29 Acts that invalidate Salah", ref: "pp.139-145" },
-    { day: 2, topic: "Practical method of offering Salah & rulings of impurities", ref: "pp.103-109, pp.21-30" },
-    { day: 3, topic: "18 Madani pearls of Isal-e-Sawab and method of Fatihah", ref: "pp.276-286" },
-  ],
-  "Jumadal Awwal": [
-    { day: 1, topic: "29 Mustahabbat and 15 Makruhaat of Wudu and ruling about used water", ref: "pp.9-13" },
-    { day: 2, topic: "When to perform Ghusl, several intentions in one Ghusl, 10 rulings of reciting Quran in impurity", ref: "pp.63-70" },
-    { day: 3, topic: "Sunan of Takbeer-e-Tahrimah, Qiyam and Ruku' from ~96 Sunan of Salah", ref: "pp.128-130" },
-  ],
-  "Jumadal Aakhir": [
-    { day: 1, topic: "Rulings on Salah on a moving conveyance, Qada Salah during travel", ref: "pp.183-187" },
-    { day: 2, topic: "Method of offering lifetime Qada Salah, order of offering Qada Salah", ref: "pp.197-202" },
-    { day: 3, topic: "Practical method of offering Salah & Method of Purifying Clothes", ref: "pp.103-109, pp.1-11" },
-  ],
-  "Rajab-ul-Murajjab": [
-    { day: 1, topic: "Sunan of Qawmah, Jalsah, Sajdah and standing for second Rak'at from ~96 Sunan", ref: "pp.130-132" },
-    { day: 2, topic: "16 Makruhaat-e-Tahrimah of Salah", ref: "pp.145-149" },
-    { day: 3, topic: "15 acts that invalidate Salah", ref: "pp.139-142" },
-  ],
-  "Sha'ban-ul-Mu'azzam": [
-    { day: 1, topic: "15 rulings about passing across the front of a Musalli", ref: "pp.170-172" },
-    { day: 2, topic: "7 Madani pearls of Friday sermon and Sunnahs of Jumu'ah", ref: "pp.240-244" },
-    { day: 3, topic: "9 Madani pearls about Salah of Witr and practical method of offering Salah", ref: "pp.161, 103-109" },
-  ],
-  "Ramadan-ul-Mubarak": [
-    { day: 1, topic: "Method of Purifying Clothes with Account of Impurities", ref: "pp.11-22" },
-    { day: 2, topic: "20 Sunnah and desirable acts of Eid", ref: "pp.250-251" },
-    { day: 3, topic: "Method of offering Eid Salah", ref: "pp.246-250" },
-  ],
-  "Shawwal-ul-Mukarram": [
-    { day: 1, topic: "20 valid reasons for missing Jama'at", ref: "pp.159-160" },
-    { day: 2, topic: "30 Wajibat of Salah (memorise at least 12)", ref: "pp.125-127" },
-    { day: 3, topic: "Sunan of Qa'dah, performing Salam, after Salam, and Sunnat-e-Ba'diyyah", ref: "pp.132-136" },
-  ],
-  "Zul-Qa'da-til-Haraam": [
-    { day: 1, topic: "6 rulings for those who cannot retain Wudu and 5 rulings about uncertainty in Wudu", ref: "pp.24-26, p.19" },
-    { day: 2, topic: "5 rulings regarding bleeding from wound, do injections nullify Wudu, vomiting and Wudu", ref: "pp.15-17" },
-    { day: 3, topic: "Practical method of offering Salah and preconditions of Salah", ref: "pp.110-115" },
-  ],
-  "Zul-Hijja-til-Haraam": [
-    { day: 1, topic: "Method of Purifying Clothes with Account of Impurities", ref: "pp.21-33" },
-    { day: 2, topic: "Salah practiced practically — Faraaid of Wudu and Ghusl", ref: "pp.103-109, p.8, pp.55-56" },
-    { day: 3, topic: "8 Madani pearls of Takbeer-e-Tashreeq and method of offering Eid Salah", ref: "pp.252-253, pp.246-247" },
-  ],
-};
-
-// ─── SCHEDULE ─────────────────────────────────────────────────────────────────
-const SCHEDULE = [
-  { id: "tahajjud", time: "Pre-Fajr", label: "Tahajjud & Preparation", icon: "🌙", activities: [
-    { time: "19 min before Subh-e-Sadiq", task: "Wake up & offer Salat-ut-Tahajjud", type: "salah" },
-    { time: "Before Fajr Azan", task: "Brothers going to nearby Masajid for Dars should leave", type: "travel" },
-    { time: "After Fajr Azan", task: "Call out Sada-e-Madinah (wake-up call for Fajr)", type: "action" },
-  ]},
-  { id: "fajr", time: "Fajr", label: "Fajr Salah & Halqah", icon: "🕌", activities: [
-    { time: "After Fajr Salah", task: "Bayan (7–12 min): Zikrullah / Bismillah / Quran / Salat-Alan-Nabi", type: "bayan" },
-    { time: "Fajr Halqah", task: "Quran recitation with translation & commentary (Madani In'aam no. 21)", type: "learning" },
-    { time: "Fajr Halqah", task: "Study Faizan-e-Sunnat passage", type: "learning" },
-    { time: "Fajr Halqah", task: "Revision of previously learned Sunnahs & Du'as", type: "learning" },
-  ]},
-  { id: "morning", time: "9:30 AM", label: "Morning Sessions", icon: "☀️", activities: [
-    { time: "9:30–9:56 AM", task: "Mashwarah (26 min): 5 min Quran & Na'at, then schedule revision & In'amaat booklet distribution", type: "admin" },
-    { time: "9:56–10:37 AM", task: "Bayan on Madani Mission (41 min): 26 min speech + 15 min mindset on 12 Madani tasks", type: "bayan" },
-    { time: "10:37–10:56 AM", task: "Individual Worship (19 min): Quran, Zikr, Salat-Alan-Nabi, study In'amaat schedule", type: "ibadah" },
-    { time: "10:56–11:08 AM", task: "Memorise short invitation towards righteousness (12 min)", type: "learning" },
-    { time: "11:08–11:20 AM", task: "Method of Individual Effort (12 min) — Ameer demonstrates practically", type: "learning" },
-    { time: "11:20 AM–12:00 PM", task: "Individual Effort (40 min): Go out to invite people to Masjid", type: "action" },
-  ]},
-  { id: "zuhr", time: "Zuhr", label: "Zuhr & Afternoon", icon: "🌤️", activities: [
-    { time: "12:00–12:30 PM", task: "Sunnah learning session (see Sunnahs tab for this month's topics)", type: "learning" },
-    { time: "12 min before Zuhr Azan", task: "Chowk Dars (7 min) from Faizan-e-Sunnat at the square", type: "action" },
-    { time: "After Zuhr Salah", task: "Madani Dars (7 min) from Faizan-e-Sunnat", type: "dars" },
-    { time: "After Zuhr Dars", task: "Laws of Salah session (30 min) — see Sunnahs tab for this month's topics", type: "learning" },
-    { time: "Afternoon", task: "Method of delivering Madani Dars & Bayan (19 min)", type: "learning" },
-    { time: "Summer: now / Winter: after Isha", task: "Memorising Du'as session (19 min) — see Du'as tab for this month's topics", type: "learning" },
-    { time: "Rest Break", task: "Rest until Asr Salah", type: "rest" },
-  ]},
-  { id: "asr", time: "Asr", label: "Asr & Madani Visit", icon: "🕌", activities: [
-    { time: "After Asr Salah", task: "Announcement & Bayan (12 min): Virtues of calling towards righteousness", type: "bayan" },
-    { time: "After Asr Bayan", task: "Madani Visit (door-to-door invitation)", type: "action" },
-    { time: "Between Asr & Maghrib", task: "Madani Dars from Faizan-e-Sunnat & Bayanaat-e-Attariyyah + Sunnah revision", type: "dars" },
-  ]},
-  { id: "maghrib", time: "Maghrib", label: "Maghrib Bayan & Dinner", icon: "🌆", activities: [
-    { time: "After Maghrib Salah", task: "Bayan by efficient Muballigh (topic varies by day — see Schedule tab)", type: "bayan" },
-    { time: "After Bayan", task: "Individual effort for 12 minutes", type: "action" },
-    { time: "Between Maghrib & Isha", task: "Dinner", type: "rest" },
-  ]},
-  { id: "isha", time: "Isha", label: "Isha & Night Session", icon: "🌃", activities: [
-    { time: "After Isha Salah", task: "Madani Dars (7 min) from Faizan-e-Sunnat", type: "dars" },
-    { time: "After Dars", task: "7 min Individual effort, then Cassette/CD Bayan (or read booklet aloud)", type: "bayan" },
-    { time: "Winter only", task: "Memorising Du'as session (19 min) — in summer held at midday", type: "learning" },
-    { time: "Night", task: "Revision: Ameer revises day's learning; volunteers recite", type: "learning" },
-    { time: "Before Sleep", task: "Collective Fikr-e-Madinah, Salat-ut-Taubah, listen to Surah Al-Mulk", type: "ibadah" },
-  ]},
-];
-
-const typeColors = {
-  salah: "#2d4a6b", bayan: "#6b2d4a", learning: "#2d6b4a",
-  action: "#6b4a1a", ibadah: "#1a406b", dars: "#4a1a6b",
-  rest: "#333", travel: "#1a5a4a", admin: "#445",
-};
-const typeLabels = {
-  salah: "Salah", bayan: "Bayan", learning: "Learning",
-  action: "Individual Effort", ibadah: "Ibadah", dars: "Dars",
-  rest: "Rest", travel: "Journey", admin: "Mashwarah",
-};
-
-const DAY_GUIDES = {
-  3: [
-    { day: 1, maghrib: "Importance of travelling in the path of Allah & virtues of intentions" },
-    { day: 2, maghrib: "Persuade participants to present names for the next Qafilah — record them" },
-    { day: 3, maghrib: "Sacrifices of pious predecessors & motivation for next Qafilah. Also: Bayan after Maghrib and Dars after Isha" },
-  ],
-};
+function formatDisplayDate(iso) {
+  if (!iso) return "—";
+  try {
+    return new Date(iso + "T12:00:00").toLocaleDateString("en-GB", {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+    });
+  } catch {
+    return iso;
+  }
+}
 
 // ─── APP ──────────────────────────────────────────────────────────────────────
 export default function App() {
@@ -284,25 +72,110 @@ export default function App() {
   const [currentDay, setCurrentDay] = useState(1);
   const [selectedMonth, setSelectedMonth] = useState(ISLAMIC_MONTHS[0]);
   const [expandedSession, setExpandedSession] = useState("fajr");
-  const [checkedItems, setCheckedItems] = useState({});
+  const [checkedItems, setCheckedItems] = useState(() => load(STORAGE_KEYS.CHECKLIST, {}));
+  const [sunnahsDone, setSunnahsDone] = useState(() => load(STORAGE_KEYS.SUNNAHS_DONE, {}));
+  const [duasDone, setDuasDone] = useState(() => load(STORAGE_KEYS.DUAS_DONE, {}));
+  const [salahDone, setSalahDone] = useState(() => load(STORAGE_KEYS.SALAH_DONE, {}));
+  const [journey, setJourney] = useState(() => ({ ...DEFAULT_JOURNEY, ...load(STORAGE_KEYS.JOURNEY, {}) }));
+  const [brothers, setBrothers] = useState(() => load(STORAGE_KEYS.BROTHERS, []));
   const [showMonthPicker, setShowMonthPicker] = useState(false);
 
+  useEffect(() => { save(STORAGE_KEYS.CHECKLIST, checkedItems); }, [checkedItems]);
+  useEffect(() => { save(STORAGE_KEYS.SUNNAHS_DONE, sunnahsDone); }, [sunnahsDone]);
+  useEffect(() => { save(STORAGE_KEYS.DUAS_DONE, duasDone); }, [duasDone]);
+  useEffect(() => { save(STORAGE_KEYS.SALAH_DONE, salahDone); }, [salahDone]);
+  useEffect(() => { save(STORAGE_KEYS.JOURNEY, journey); }, [journey]);
+
+  useEffect(() => {
+    const syncBrothers = () => setBrothers(load(STORAGE_KEYS.BROTHERS, []));
+    window.addEventListener("storage", syncBrothers);
+    return () => window.removeEventListener("storage", syncBrothers);
+  }, [tab]);
+
+  const updateJourney = (field, value) => setJourney((prev) => ({ ...prev, [field]: value }));
+
+  const checklistKey = (sessionId, idx) => `${currentDay}-${sessionId}-${idx}`;
+
   const toggleCheck = (sessionId, idx) => {
-    const key = `${sessionId}-${idx}`;
-    setCheckedItems(prev => ({ ...prev, [key]: !prev[key] }));
+    const key = checklistKey(sessionId, idx);
+    setCheckedItems((prev) => ({ ...prev, [key]: !prev[key] }));
   };
 
-  const todayGuide = DAY_GUIDES[3]?.find(d => d.day === Math.min(currentDay, 3));
+  const toggleSunnahDone = (day) => {
+    const key = monthDayKey(selectedMonth, day);
+    setSunnahsDone((prev) => ({ ...prev, [key]: !prev[key] }));
+  };
+
+  const toggleDuaDone = (day) => {
+    const key = monthDayKey(selectedMonth, day);
+    setDuasDone((prev) => ({ ...prev, [key]: !prev[key] }));
+  };
+
+  const toggleSalahDone = (day) => {
+    const key = monthDayKey(selectedMonth, day);
+    setSalahDone((prev) => ({ ...prev, [key]: !prev[key] }));
+  };
+
+  const todayGuide = DAY_GUIDES[3]?.find((d) => d.day === Math.min(currentDay, 3));
   const monthSunnahs = MONTHLY_SUNNAHS[selectedMonth] || [];
   const monthDuas = MONTHLY_DUAS[selectedMonth] || [];
   const monthSalahLaws = MONTHLY_SALAH_LAWS[selectedMonth] || [];
-  const todaySunnahs = qafilaType === 3 ? monthSunnahs.filter(s => s.day === currentDay) : monthSunnahs;
-  const todayDuas = qafilaType === 3 ? monthDuas.filter(d => d.day === currentDay) : monthDuas;
-  const todaySalahLaws = qafilaType === 3 ? monthSalahLaws.filter(s => s.day === currentDay) : monthSalahLaws;
+  const todaySunnahs = qafilaType === 3 ? monthSunnahs.filter((s) => s.day === currentDay) : monthSunnahs;
+  const todayDuas = qafilaType === 3 ? monthDuas.filter((d) => d.day === currentDay) : monthDuas;
+  const todaySalahLaws = qafilaType === 3 ? monthSalahLaws.filter((s) => s.day === currentDay) : monthSalahLaws;
 
-  const total = SCHEDULE.reduce((s, sess) => s + sess.activities.length, 0);
-  const done = Object.values(checkedItems).filter(Boolean).length;
-  const pct = Math.round((done / total) * 100);
+  const perDayTotal = SCHEDULE.reduce((s, sess) => s + sess.activities.length, 0);
+  const dayDone = SCHEDULE.reduce((count, session) => {
+    return count + session.activities.filter((_, i) => checkedItems[checklistKey(session.id, i)]).length;
+  }, 0);
+  const dayPct = Math.round((dayDone / perDayTotal) * 100);
+
+  const tripTotal = perDayTotal * qafilaType;
+  const tripDone = Object.entries(checkedItems).filter(([key, val]) => {
+    if (!val) return false;
+    const day = parseInt(key.split("-")[0], 10);
+    return day >= 1 && day <= qafilaType;
+  }).length;
+  const tripPct = tripTotal ? Math.round((tripDone / tripTotal) * 100) : 0;
+
+  const reportSummary = buildReportSummary({
+    journey,
+    brothers,
+    qafilaType,
+    selectedMonth,
+    checkedItems,
+    sunnahsDone,
+    duasDone,
+    salahDone,
+  });
+
+  const canDownloadReport =
+    journey.fromCity.trim() &&
+    journey.toCity.trim() &&
+    brothers.length > 0;
+
+  const handleDownloadReport = () => {
+    generateReportPdf({
+      journey,
+      brothers,
+      qafilaType,
+      selectedMonth,
+      checkedItems,
+      sunnahsDone,
+      duasDone,
+      salahDone,
+    });
+  };
+
+  const mainTabs = [
+    ["journey", "🚌 Journey"],
+    ["schedule", "📋 Schedule"],
+    ["sunnahs", "📿 Sunnahs"],
+    ["duas", "🤲 Du'as"],
+    ["salah", "🙏 Salah"],
+    ["expenses", "💰 Expenses"],
+    ["report", "📄 PDF"],
+  ];
 
   return (
     <div style={{ fontFamily: "'Segoe UI', system-ui, sans-serif", background: "#0d1117", minHeight: "100vh", color: "#e6e6e6" }}>
@@ -367,13 +240,13 @@ export default function App() {
           </div>
 
           {/* Tabs */}
-          <div style={{ display: "flex", marginTop: 10 }}>
-            {[["schedule","📋 Schedule"],["sunnahs","📿 Sunnahs"],["duas","🤲 Du'as"],["salah","🙏 Salah Laws"],["expenses","💰 Expenses"]].map(([id, label]) => (
-              <button key={id} onClick={() => setTab(id)}
-                style={{ flex: 1, padding: "9px 2px", border: "none",
+          <div style={{ display: "flex", marginTop: 10, overflowX: "auto" }}>
+            {mainTabs.map(([id, label]) => (
+              <button key={id} onClick={() => { setTab(id); setBrothers(load(STORAGE_KEYS.BROTHERS, [])); }}
+                style={{ flex: "1 0 auto", padding: "9px 4px", border: "none", minWidth: 52,
                   borderBottom: tab === id ? "2px solid #d4af7a" : "2px solid transparent",
                   background: "transparent", color: tab === id ? "#d4af7a" : "#8899aa",
-                  cursor: "pointer", fontSize: 10, fontWeight: tab === id ? 700 : 400 }}>
+                  cursor: "pointer", fontSize: 9, fontWeight: tab === id ? 700 : 400 }}>
                 {label}
               </button>
             ))}
@@ -382,6 +255,55 @@ export default function App() {
       </div>
 
       <div style={{ maxWidth: 600, margin: "0 auto", padding: 14 }} onClick={() => showMonthPicker && setShowMonthPicker(false)}>
+
+        {/* ── JOURNEY TAB ── */}
+        {tab === "journey" && (
+          <div>
+            <div style={{ background: "linear-gradient(135deg,#1a2030,#0d1a30)", borderRadius: 12, padding: "12px 14px", marginBottom: 14, border: "1px solid #2a3a4a" }}>
+              <div style={{ fontSize: 12, fontWeight: 700, color: "#d4af7a", marginBottom: 4 }}>🚌 Journey Details</div>
+              <div style={{ fontSize: 11, color: "#8899aa" }}>Set where your Qafilah is travelling from and to, plus the venue details for this trip.</div>
+            </div>
+
+            <div style={{ background: "#141420", borderRadius: 12, padding: "14px", border: "1px solid #2a2a3a" }}>
+              <div style={{ display: "flex", gap: 8, marginBottom: 12, flexWrap: "wrap" }}>
+                <div style={{ flex: 1, minWidth: 120 }}>
+                  <div style={{ fontSize: 11, color: "#8899aa", marginBottom: 4 }}>From city</div>
+                  <input value={journey.fromCity} onChange={(e) => updateJourney("fromCity", e.target.value)}
+                    placeholder="e.g. Manchester" style={inputStyle} />
+                </div>
+                <div style={{ flex: 1, minWidth: 120 }}>
+                  <div style={{ fontSize: 11, color: "#8899aa", marginBottom: 4 }}>To city (destination)</div>
+                  <input value={journey.toCity} onChange={(e) => updateJourney("toCity", e.target.value)}
+                    placeholder="e.g. Bradford" style={inputStyle} />
+                </div>
+              </div>
+
+              <div style={{ marginBottom: 12 }}>
+                <div style={{ fontSize: 11, color: "#8899aa", marginBottom: 4 }}>Venue name</div>
+                <input value={journey.venueName} onChange={(e) => updateJourney("venueName", e.target.value)}
+                  placeholder="e.g. Faizan-e-Madinah" style={inputStyle} />
+              </div>
+
+              <div style={{ marginBottom: 12 }}>
+                <div style={{ fontSize: 11, color: "#8899aa", marginBottom: 4 }}>Venue address</div>
+                <textarea value={journey.venueAddress} onChange={(e) => updateJourney("venueAddress", e.target.value)}
+                  placeholder="Full address of the venue" rows={3}
+                  style={{ ...inputStyle, resize: "vertical", fontFamily: "inherit" }} />
+              </div>
+
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                <div style={{ flex: 1, minWidth: 120 }}>
+                  <div style={{ fontSize: 11, color: "#8899aa", marginBottom: 4 }}>Start date</div>
+                  <input type="date" value={journey.startDate} onChange={(e) => updateJourney("startDate", e.target.value)} style={inputStyle} />
+                </div>
+                <div style={{ flex: 1, minWidth: 120 }}>
+                  <div style={{ fontSize: 11, color: "#8899aa", marginBottom: 4 }}>End date</div>
+                  <input type="date" value={journey.endDate} onChange={(e) => updateJourney("endDate", e.target.value)} style={inputStyle} />
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* ── SCHEDULE TAB ── */}
         {tab === "schedule" && (
@@ -395,7 +317,7 @@ export default function App() {
 
             {SCHEDULE.map(session => {
               const isOpen = expandedSession === session.id;
-              const completedCount = session.activities.filter((_, i) => checkedItems[`${session.id}-${i}`]).length;
+              const completedCount = session.activities.filter((_, i) => checkedItems[checklistKey(session.id, i)]).length;
               return (
                 <div key={session.id} style={{ marginBottom: 8, borderRadius: 12, overflow: "hidden", border: "1px solid #2a2a3a" }}>
                   <button onClick={() => setExpandedSession(isOpen ? null : session.id)}
@@ -416,7 +338,7 @@ export default function App() {
                   {isOpen && (
                     <div style={{ background: "#0f1219", padding: "6px 10px 10px" }}>
                       {session.activities.map((act, i) => {
-                        const key = `${session.id}-${i}`;
+                        const key = checklistKey(session.id, i);
                         const isDone = checkedItems[key];
                         return (
                           <div key={i} onClick={() => toggleCheck(session.id, i)}
@@ -448,16 +370,24 @@ export default function App() {
 
             {/* Progress */}
             <div style={{ background: "#141420", borderRadius: 12, padding: "12px 14px", marginTop: 4, border: "1px solid #2a2a3a" }}>
+              <div style={{ fontSize: 10, color: "#6677aa", textTransform: "uppercase", letterSpacing: 1, marginBottom: 8 }}>Day {currentDay}</div>
               <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
-                <span style={{ fontSize: 12, color: "#d4af7a", fontWeight: 600 }}>{done} of {total} activities</span>
-                <span style={{ fontSize: 12, color: "#7fd4a0" }}>{pct}%</span>
+                <span style={{ fontSize: 12, color: "#d4af7a", fontWeight: 600 }}>{dayDone} of {perDayTotal} today</span>
+                <span style={{ fontSize: 12, color: "#7fd4a0" }}>{dayPct}%</span>
+              </div>
+              <div style={{ height: 5, background: "#1e2030", borderRadius: 4, overflow: "hidden", marginBottom: 10 }}>
+                <div style={{ height: "100%", width: `${dayPct}%`, background: "linear-gradient(90deg,#2d6b4a,#7fd4a0)", borderRadius: 4, transition: "width 0.3s" }} />
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
+                <span style={{ fontSize: 12, color: "#8899aa" }}>Full trip: {tripDone} of {tripTotal}</span>
+                <span style={{ fontSize: 12, color: "#7fd4a0" }}>{tripPct}%</span>
               </div>
               <div style={{ height: 5, background: "#1e2030", borderRadius: 4, overflow: "hidden" }}>
-                <div style={{ height: "100%", width: `${pct}%`, background: "linear-gradient(90deg,#2d6b4a,#7fd4a0)", borderRadius: 4, transition: "width 0.3s" }} />
+                <div style={{ height: "100%", width: `${tripPct}%`, background: "linear-gradient(90deg,#2d4a6b,#7aa0d4)", borderRadius: 4, transition: "width 0.3s" }} />
               </div>
-              {done > 0 && (
+              {tripDone > 0 && (
                 <button onClick={() => setCheckedItems({})} style={{ marginTop: 8, fontSize: 10, color: "#556", background: "none", border: "none", cursor: "pointer", textDecoration: "underline" }}>
-                  Reset checklist
+                  Reset all checklist
                 </button>
               )}
             </div>
@@ -477,24 +407,40 @@ export default function App() {
 
             <div style={{ marginBottom: 14 }}>
               <div style={{ fontSize: 10, color: "#6677aa", textTransform: "uppercase", letterSpacing: 1, marginBottom: 8 }}>📿 Sunnahs & Manners</div>
-              {(qafilaType === 3 ? todaySunnahs : monthSunnahs).map((s, i) => (
-                <div key={i} style={{ background: "#141420", borderRadius: 10, padding: "12px 14px", marginBottom: 8, border: "1px solid #2a3a3a", borderLeft: "3px solid #2d6b4a" }}>
-                  {qafilaType !== 3 && <div style={{ fontSize: 10, color: "#5a9a6a", marginBottom: 4 }}>Day {s.day}</div>}
-                  <div style={{ fontSize: 13, color: "#c8d0dc", fontWeight: 500, marginBottom: 4 }}>{s.topic}</div>
-                  <div style={{ fontSize: 10, color: "#4a6a5a", background: "#0d1f14", borderRadius: 5, padding: "3px 8px", display: "inline-block" }}>📖 {s.ref}</div>
+              {(qafilaType === 3 ? todaySunnahs : monthSunnahs).map((s, i) => {
+                const isDone = !!sunnahsDone[monthDayKey(selectedMonth, s.day)];
+                return (
+                <div key={i} onClick={() => toggleSunnahDone(s.day)}
+                  style={{ background: isDone ? "#0d1f14" : "#141420", borderRadius: 10, padding: "12px 14px", marginBottom: 8, border: "1px solid #2a3a3a", borderLeft: "3px solid #2d6b4a", cursor: "pointer" }}>
+                  <div style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
+                    <CompletionCheckbox isDone={isDone} onToggle={() => toggleSunnahDone(s.day)} />
+                    <div style={{ flex: 1 }}>
+                      {qafilaType !== 3 && <div style={{ fontSize: 10, color: "#5a9a6a", marginBottom: 4 }}>Day {s.day}</div>}
+                      <div style={{ fontSize: 13, color: isDone ? "#5a9a6a" : "#c8d0dc", fontWeight: 500, marginBottom: 4, textDecoration: isDone ? "line-through" : "none" }}>{s.topic}</div>
+                      <div style={{ fontSize: 10, color: "#4a6a5a", background: "#0d1f14", borderRadius: 5, padding: "3px 8px", display: "inline-block" }}>📖 {s.ref}</div>
+                    </div>
+                  </div>
                 </div>
-              ))}
+              );})}
             </div>
 
             <div style={{ marginBottom: 14 }}>
               <div style={{ fontSize: 10, color: "#6677aa", textTransform: "uppercase", letterSpacing: 1, marginBottom: 8 }}>🙏 Laws of Salah (30 min)</div>
-              {(qafilaType === 3 ? todaySalahLaws : monthSalahLaws).map((s, i) => (
-                <div key={i} style={{ background: "#141420", borderRadius: 10, padding: "12px 14px", marginBottom: 8, border: "1px solid #2a2a4a", borderLeft: "3px solid #2d4a6b" }}>
-                  {qafilaType !== 3 && <div style={{ fontSize: 10, color: "#5a7aaa", marginBottom: 4 }}>Day {s.day}</div>}
-                  <div style={{ fontSize: 13, color: "#c8d0dc", fontWeight: 500, marginBottom: 4 }}>{s.topic}</div>
-                  <div style={{ fontSize: 10, color: "#4a5a7a", background: "#0d1420", borderRadius: 5, padding: "3px 8px", display: "inline-block" }}>📖 {s.ref}</div>
+              {(qafilaType === 3 ? todaySalahLaws : monthSalahLaws).map((s, i) => {
+                const isDone = !!salahDone[monthDayKey(selectedMonth, s.day)];
+                return (
+                <div key={i} onClick={() => toggleSalahDone(s.day)}
+                  style={{ background: isDone ? "#0d1420" : "#141420", borderRadius: 10, padding: "12px 14px", marginBottom: 8, border: "1px solid #2a2a4a", borderLeft: "3px solid #2d4a6b", cursor: "pointer" }}>
+                  <div style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
+                    <CompletionCheckbox isDone={isDone} onToggle={() => toggleSalahDone(s.day)} />
+                    <div style={{ flex: 1 }}>
+                      {qafilaType !== 3 && <div style={{ fontSize: 10, color: "#5a7aaa", marginBottom: 4 }}>Day {s.day}</div>}
+                      <div style={{ fontSize: 13, color: isDone ? "#5a7aaa" : "#c8d0dc", fontWeight: 500, marginBottom: 4, textDecoration: isDone ? "line-through" : "none" }}>{s.topic}</div>
+                      <div style={{ fontSize: 10, color: "#4a5a7a", background: "#0d1420", borderRadius: 5, padding: "3px 8px", display: "inline-block" }}>📖 {s.ref}</div>
+                    </div>
+                  </div>
                 </div>
-              ))}
+              );})}
             </div>
 
             {qafilaType !== 3 && (
@@ -522,20 +468,24 @@ export default function App() {
               </div>
             </div>
 
-            {(qafilaType === 3 ? todayDuas : monthDuas).map((d, i) => (
-              <div key={i} style={{ background: "#141420", borderRadius: 12, padding: "14px", marginBottom: 10, border: "1px solid #2a2a4a", borderLeft: "3px solid #6b2d4a" }}>
-                {qafilaType !== 3 && <div style={{ fontSize: 10, color: "#aa5a7a", marginBottom: 4 }}>Day {d.day}</div>}
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+            {(qafilaType === 3 ? todayDuas : monthDuas).map((d, i) => {
+              const isDone = !!duasDone[monthDayKey(selectedMonth, d.day)];
+              return (
+              <div key={i} onClick={() => toggleDuaDone(d.day)}
+                style={{ background: isDone ? "#1a0d20" : "#141420", borderRadius: 12, padding: "14px", marginBottom: 10, border: "1px solid #2a2a4a", borderLeft: "3px solid #6b2d4a", cursor: "pointer" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8 }}>
+                  <CompletionCheckbox isDone={isDone} onToggle={() => toggleDuaDone(d.day)} />
                   <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: 13, color: "#d4c0e0", fontWeight: 600, marginBottom: 6 }}>{d.dua}</div>
+                    {qafilaType !== 3 && <div style={{ fontSize: 10, color: "#aa5a7a", marginBottom: 4 }}>Day {d.day}</div>}
+                    <div style={{ fontSize: 13, color: isDone ? "#8a6a8a" : "#d4c0e0", fontWeight: 600, marginBottom: 6, textDecoration: isDone ? "line-through" : "none" }}>{d.dua}</div>
                     <div style={{ fontSize: 10, color: "#6a4a6a", background: "#1a0d20", borderRadius: 5, padding: "3px 8px", display: "inline-block" }}>
                       📖 Path to Piety, page {d.page}
                     </div>
                   </div>
-                  <span style={{ fontSize: 22, opacity: 0.5, marginLeft: 8 }}>🤲</span>
+                  <span style={{ fontSize: 22, opacity: 0.5 }}>🤲</span>
                 </div>
               </div>
-            ))}
+            );})}
 
             {qafilaType !== 3 && (
               <div style={{ background: "#141420", borderRadius: 12, padding: "12px 14px", border: "1px solid #2a2a3a", marginTop: 4 }}>
@@ -582,6 +532,69 @@ export default function App() {
                 <div style={{ fontSize: 10, color: "#4a5a7a", background: "#0d1420", borderRadius: 5, padding: "3px 8px", display: "inline-block" }}>📖 {s.ref}</div>
               </div>
             ))}
+          </div>
+        )}
+
+        {/* ── REPORT TAB ── */}
+        {tab === "report" && (
+          <div>
+            <div style={{ background: "linear-gradient(135deg,#1a2030,#0d1a30)", borderRadius: 12, padding: "12px 14px", marginBottom: 14, border: "1px solid #2a3a4a" }}>
+              <div style={{ fontSize: 12, fontWeight: 700, color: "#d4af7a", marginBottom: 4 }}>📄 Trip Report</div>
+              <div style={{ fontSize: 11, color: "#8899aa" }}>Download a PDF summary of your full Qafilah — journey, brothers, completed activities, sunnahs and du'as.</div>
+            </div>
+
+            {(journey.fromCity || journey.toCity) && (
+              <div style={{ background: "#141420", borderRadius: 12, padding: "14px", marginBottom: 12, border: "1px solid #2a2a3a" }}>
+                <div style={{ fontSize: 10, color: "#6677aa", textTransform: "uppercase", letterSpacing: 1, marginBottom: 8 }}>Journey</div>
+                <div style={{ fontSize: 14, fontWeight: 700, color: "#d4af7a", marginBottom: 6 }}>
+                  {journey.fromCity || "—"} → {journey.toCity || "—"}
+                </div>
+                {journey.venueName && <div style={{ fontSize: 12, color: "#c8d0dc", marginBottom: 4 }}>{journey.venueName}</div>}
+                {journey.venueAddress && <div style={{ fontSize: 11, color: "#8899aa", marginBottom: 4, lineHeight: 1.5 }}>{journey.venueAddress}</div>}
+                <div style={{ fontSize: 11, color: "#8899aa" }}>
+                  {formatDisplayDate(journey.startDate)} – {formatDisplayDate(journey.endDate)}
+                </div>
+              </div>
+            )}
+
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(2,1fr)", gap: 8, marginBottom: 14 }}>
+              {[
+                { val: brothers.length, lbl: "Brothers" },
+                { val: reportSummary.activityCount, lbl: "Activities done" },
+                { val: reportSummary.sunnahCount + reportSummary.salahCount, lbl: "Sunnahs / Salah" },
+                { val: reportSummary.duaCount, lbl: "Du'as done" },
+              ].map((s, i) => (
+                <div key={i} style={{ background: "#141420", borderRadius: 10, padding: "10px", textAlign: "center", border: "1px solid #2a2a3a" }}>
+                  <div style={{ fontSize: 20, fontWeight: 700, color: "#d4af7a" }}>{s.val}</div>
+                  <div style={{ fontSize: 10, color: "#8899aa", marginTop: 2 }}>{s.lbl}</div>
+                </div>
+              ))}
+            </div>
+
+            {brothers.length > 0 && (
+              <div style={{ background: "#141420", borderRadius: 12, padding: "14px", marginBottom: 14, border: "1px solid #2a2a3a" }}>
+                <div style={{ fontSize: 10, color: "#6677aa", textTransform: "uppercase", letterSpacing: 1, marginBottom: 8 }}>Brothers travelled</div>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                  {brothers.map((b) => (
+                    <span key={b} style={{ background: "#1a1a2e", border: "1px solid #2a2a3a", borderRadius: 20, padding: "4px 12px", fontSize: 12 }}>{b}</span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {!canDownloadReport && (
+              <div style={{ background: "#1a1520", borderRadius: 10, padding: "12px 14px", marginBottom: 12, border: "1px solid #3a2a4a", fontSize: 11, color: "#a07fd4", lineHeight: 1.6 }}>
+                To download the PDF, fill in <strong>from city</strong> and <strong>to city</strong> on the Journey tab, and add at least one brother on the Expenses tab.
+              </div>
+            )}
+
+            <button onClick={handleDownloadReport} disabled={!canDownloadReport}
+              style={{
+                width: "100%", background: canDownloadReport ? "#d4af7a" : "#3a3a4a", border: "none", borderRadius: 8,
+                padding: "12px", color: canDownloadReport ? "#1a1a2e" : "#8899aa", fontWeight: 700, cursor: canDownloadReport ? "pointer" : "not-allowed", fontSize: 13,
+              }}>
+              ⬇ Download PDF Report
+            </button>
           </div>
         )}
 
