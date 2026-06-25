@@ -7,6 +7,7 @@ export const STORAGE_KEYS = {
   SUNNAHS_DONE: "qf_sunnahs_done",
   DUAS_DONE: "qf_duas_done",
   SALAH_DONE: "qf_salah_done",
+  DUTIES: "qf_duties",
 };
 
 export const DEFAULT_JOURNEY = {

@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import ExpenseManager from "./ExpenseManager";
+import DutiesTab from "./DutiesTab";
 import {
   ISLAMIC_MONTHS,
   MONTHLY_SUNNAHS,
@@ -80,6 +81,7 @@ export default function App() {
   const [sunnahsDone, setSunnahsDone] = useState(() => load(STORAGE_KEYS.SUNNAHS_DONE, {}));
   const [duasDone, setDuasDone] = useState(() => load(STORAGE_KEYS.DUAS_DONE, {}));
   const [salahDone, setSalahDone] = useState(() => load(STORAGE_KEYS.SALAH_DONE, {}));
+  const [duties, setDuties] = useState(() => load(STORAGE_KEYS.DUTIES, {}));
   const [journey, setJourney] = useState(() => ({ ...DEFAULT_JOURNEY, ...load(STORAGE_KEYS.JOURNEY, {}) }));
   const [brothers, setBrothers] = useState(() => load(STORAGE_KEYS.BROTHERS, []));
   const [expenses, setExpenses] = useState(() => load(STORAGE_KEYS.EXPENSES, []));
@@ -124,6 +126,7 @@ export default function App() {
   useEffect(() => { save(STORAGE_KEYS.SUNNAHS_DONE, sunnahsDone); }, [sunnahsDone]);
   useEffect(() => { save(STORAGE_KEYS.DUAS_DONE, duasDone); }, [duasDone]);
   useEffect(() => { save(STORAGE_KEYS.SALAH_DONE, salahDone); }, [salahDone]);
+  useEffect(() => { save(STORAGE_KEYS.DUTIES, duties); }, [duties]);
   useEffect(() => { save(STORAGE_KEYS.JOURNEY, journey); }, [journey]);
 
   useEffect(() => {
@@ -148,7 +151,7 @@ export default function App() {
       "Start a new Qafilah? This will permanently delete:\n\n" +
       "• Journey details\n" +
       "• Brothers list and expenses\n" +
-      "• All schedule, sunnah, and du'a progress\n\n" +
+      "• All schedule, sunnah, du'a, and duty progress\n\n" +
       "This cannot be undone."
     );
     if (!confirmed) return;
@@ -158,6 +161,7 @@ export default function App() {
     setSunnahsDone({});
     setDuasDone({});
     setSalahDone({});
+    setDuties({});
     setBrothers([]);
     setExpenses([]);
     setCurrentDay(1);
@@ -246,6 +250,7 @@ export default function App() {
     ["sunnahs", "📿 Sunnahs"],
     ["duas", "🤲 Du'as"],
     ["salah", "🙏 Salah"],
+    ["duties", "📌 Duties"],
     ["expenses", "💰 Expenses"],
     ["report", "📄 PDF"],
   ];
@@ -750,6 +755,17 @@ export default function App() {
               </div>
             ))}
           </div>
+        )}
+
+        {/* ── DUTIES TAB ── */}
+        {tab === "duties" && (
+          <DutiesTab
+            currentDay={currentDay}
+            qafilaType={qafilaType}
+            brothers={brothers}
+            duties={duties}
+            setDuties={setDuties}
+          />
         )}
 
         {/* ── REPORT TAB ── */}
