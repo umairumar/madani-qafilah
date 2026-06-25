@@ -16,6 +16,8 @@ import {
   load,
   save,
   monthDayKey,
+  clearTripData,
+  RESET_EVENT,
 } from "./storage";
 import { buildReportSummary, generateReportPdf } from "./generateReportPdf";
 import LegalPage from "./LegalPage";
@@ -80,6 +82,7 @@ export default function App() {
   const [salahDone, setSalahDone] = useState(() => load(STORAGE_KEYS.SALAH_DONE, {}));
   const [journey, setJourney] = useState(() => ({ ...DEFAULT_JOURNEY, ...load(STORAGE_KEYS.JOURNEY, {}) }));
   const [brothers, setBrothers] = useState(() => load(STORAGE_KEYS.BROTHERS, []));
+  const [expenses, setExpenses] = useState(() => load(STORAGE_KEYS.EXPENSES, []));
   const [showMonthPicker, setShowMonthPicker] = useState(false);
   const [legalView, setLegalView] = useState(null);
   const tabsScrollRef = useRef(null);
@@ -124,12 +127,43 @@ export default function App() {
   useEffect(() => { save(STORAGE_KEYS.JOURNEY, journey); }, [journey]);
 
   useEffect(() => {
-    const syncBrothers = () => setBrothers(load(STORAGE_KEYS.BROTHERS, []));
+    const syncBrothers = () => {
+      setBrothers(load(STORAGE_KEYS.BROTHERS, []));
+      setExpenses(load(STORAGE_KEYS.EXPENSES, []));
+    };
     window.addEventListener("storage", syncBrothers);
     return () => window.removeEventListener("storage", syncBrothers);
   }, [tab]);
 
   const updateJourney = (field, value) => setJourney((prev) => ({ ...prev, [field]: value }));
+
+  const openVenueInMaps = () => {
+    const query = [journey.venueName, journey.venueAddress].filter(Boolean).join(", ");
+    if (!query) return;
+    window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`, "_blank", "noopener,noreferrer");
+  };
+
+  const startNewQafilah = () => {
+    const confirmed = window.confirm(
+      "Start a new Qafilah? This will permanently delete:\n\n" +
+      "• Journey details\n" +
+      "• Brothers list and expenses\n" +
+      "• All schedule, sunnah, and du'a progress\n\n" +
+      "This cannot be undone."
+    );
+    if (!confirmed) return;
+    clearTripData();
+    setJourney({ ...DEFAULT_JOURNEY });
+    setCheckedItems({});
+    setSunnahsDone({});
+    setDuasDone({});
+    setSalahDone({});
+    setBrothers([]);
+    setExpenses([]);
+    setCurrentDay(1);
+    setTab("journey");
+    window.dispatchEvent(new Event(RESET_EVENT));
+  };
 
   const checklistKey = (sessionId, idx) => `${currentDay}-${sessionId}-${idx}`;
 
@@ -184,6 +218,7 @@ export default function App() {
     sunnahsDone,
     duasDone,
     salahDone,
+    expenses,
   });
 
   const canDownloadReport =
@@ -201,6 +236,7 @@ export default function App() {
       sunnahsDone,
       duasDone,
       salahDone,
+      expenses,
     });
   };
 
@@ -315,7 +351,7 @@ export default function App() {
                   key={id}
                   type="button"
                   data-tab-id={id}
-                  onClick={() => { setTab(id); setBrothers(load(STORAGE_KEYS.BROTHERS, [])); }}
+                  onClick={() => { setTab(id); setBrothers(load(STORAGE_KEYS.BROTHERS, [])); setExpenses(load(STORAGE_KEYS.EXPENSES, [])); }}
                   style={{
                     flex: "0 0 auto",
                     padding: "10px 14px",
@@ -393,6 +429,61 @@ export default function App() {
                   style={{ ...inputStyle, resize: "vertical", fontFamily: "inherit" }} />
               </div>
 
+              {(journey.venueName || journey.venueAddress) && (
+                <button
+                  type="button"
+                  onClick={openVenueInMaps}
+                  style={{
+                    width: "100%",
+                    marginBottom: 12,
+                    background: "#1a2a3a",
+                    border: "1px solid #2d4a6b",
+                    borderRadius: 8,
+                    padding: "10px",
+                    color: "#7aa0d4",
+                    fontWeight: 600,
+                    cursor: "pointer",
+                    fontSize: 12,
+                  }}
+                >
+                  Open venue in Maps
+                </button>
+              )}
+
+              <div style={{ display: "flex", gap: 8, marginBottom: 12, flexWrap: "wrap" }}>
+                <div style={{ flex: 1, minWidth: 120 }}>
+                  <div style={{ fontSize: 11, color: "#8899aa", marginBottom: 4 }}>Ameer name</div>
+                  <input value={journey.ameerName} onChange={(e) => updateJourney("ameerName", e.target.value)}
+                    placeholder="e.g. Muhammad Ali" style={inputStyle} />
+                </div>
+                <div style={{ flex: 1, minWidth: 120 }}>
+                  <div style={{ fontSize: 11, color: "#8899aa", marginBottom: 4 }}>Ameer phone</div>
+                  <input type="tel" value={journey.ameerPhone} onChange={(e) => updateJourney("ameerPhone", e.target.value)}
+                    placeholder="e.g. 07xxx xxxxxx" style={inputStyle} />
+                </div>
+              </div>
+
+              {journey.ameerPhone && (
+                <a
+                  href={`tel:${journey.ameerPhone.replace(/\s/g, "")}`}
+                  style={{
+                    display: "block",
+                    textAlign: "center",
+                    marginBottom: 12,
+                    padding: "10px",
+                    background: "#1a2a1a",
+                    border: "1px solid #2a4a2a",
+                    borderRadius: 8,
+                    color: "#7fd4a0",
+                    fontWeight: 600,
+                    fontSize: 12,
+                    textDecoration: "none",
+                  }}
+                >
+                  Call Ameer{journey.ameerName ? `: ${journey.ameerName}` : ""}
+                </a>
+              )}
+
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                 <div style={{ flex: 1, minWidth: 120 }}>
                   <div style={{ fontSize: 11, color: "#8899aa", marginBottom: 4 }}>Start date</div>
@@ -403,6 +494,30 @@ export default function App() {
                   <input type="date" value={journey.endDate} onChange={(e) => updateJourney("endDate", e.target.value)} style={inputStyle} />
                 </div>
               </div>
+            </div>
+
+            <div style={{ background: "#1a1010", borderRadius: 12, padding: "14px", marginTop: 14, border: "1px solid #4a2a2a" }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: "#f08080", marginBottom: 6 }}>Start fresh</div>
+              <div style={{ fontSize: 11, color: "#8899aa", marginBottom: 12, lineHeight: 1.5 }}>
+                Clear all journey details, brothers, expenses, and progress to begin a new Qafilah.
+              </div>
+              <button
+                type="button"
+                onClick={startNewQafilah}
+                style={{
+                  width: "100%",
+                  background: "transparent",
+                  border: "1px solid #f08080",
+                  borderRadius: 8,
+                  padding: "10px",
+                  color: "#f08080",
+                  fontWeight: 700,
+                  cursor: "pointer",
+                  fontSize: 12,
+                }}
+              >
+                Start new Qafilah
+              </button>
             </div>
           </div>
         )}
@@ -642,7 +757,7 @@ export default function App() {
           <div>
             <div style={{ background: "linear-gradient(135deg,#1a2030,#0d1a30)", borderRadius: 12, padding: "12px 14px", marginBottom: 14, border: "1px solid #2a3a4a" }}>
               <div style={{ fontSize: 12, fontWeight: 700, color: "#d4af7a", marginBottom: 4 }}>📄 Trip Report</div>
-              <div style={{ fontSize: 11, color: "#8899aa" }}>Download a PDF summary of your full Qafilah — journey, brothers, completed activities, sunnahs and du'as.</div>
+              <div style={{ fontSize: 11, color: "#8899aa" }}>Download a PDF summary of your full Qafilah — journey, brothers, activities, sunnahs, du'as, and expenses.</div>
             </div>
 
             {(journey.fromCity || journey.toCity) && (
@@ -653,9 +768,17 @@ export default function App() {
                 </div>
                 {journey.venueName && <div style={{ fontSize: 12, color: "#c8d0dc", marginBottom: 4 }}>{journey.venueName}</div>}
                 {journey.venueAddress && <div style={{ fontSize: 11, color: "#8899aa", marginBottom: 4, lineHeight: 1.5 }}>{journey.venueAddress}</div>}
-                <div style={{ fontSize: 11, color: "#8899aa" }}>
+                <div style={{ fontSize: 11, color: "#8899aa", marginBottom: 4 }}>
                   {formatDisplayDate(journey.startDate)} – {formatDisplayDate(journey.endDate)}
                 </div>
+                {journey.ameerName && (
+                  <div style={{ fontSize: 11, color: "#c8d0dc" }}>
+                    Ameer: {journey.ameerName}
+                    {journey.ameerPhone && (
+                      <> · <a href={`tel:${journey.ameerPhone.replace(/\s/g, "")}`} style={{ color: "#7fd4a0" }}>{journey.ameerPhone}</a></>
+                    )}
+                  </div>
+                )}
               </div>
             )}
 
@@ -665,6 +788,8 @@ export default function App() {
                 { val: reportSummary.activityCount, lbl: "Activities done" },
                 { val: reportSummary.sunnahCount + reportSummary.salahCount, lbl: "Sunnahs / Salah" },
                 { val: reportSummary.duaCount, lbl: "Du'as done" },
+                { val: reportSummary.expenseCount, lbl: "Expense entries" },
+                { val: `£${reportSummary.expenseTotal.toFixed(2)}`, lbl: "Total spent" },
               ].map((s, i) => (
                 <div key={i} style={{ background: "#141420", borderRadius: 10, padding: "10px", textAlign: "center", border: "1px solid #2a2a3a" }}>
                   <div style={{ fontSize: 20, fontWeight: 700, color: "#d4af7a" }}>{s.val}</div>

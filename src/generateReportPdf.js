@@ -7,6 +7,7 @@ import {
   MONTHLY_SALAH_LAWS,
 } from "./qafilahData";
 import { monthDayKey } from "./storage";
+import { computeExpenseSummary, CAT_LABELS } from "./expenseUtils";
 
 function formatDate(iso) {
   if (!iso) return "—";
@@ -121,11 +122,13 @@ export function buildReportSummary({
   sunnahsDone,
   duasDone,
   salahDone,
+  expenses = [],
 }) {
   const activitiesByDay = collectActivitiesByDay(checkedItems, qafilaType);
   const sunnahsByDay = collectCompletedSunnahs(sunnahsDone, selectedMonth, qafilaType);
   const salahByDay = collectCompletedSalahLaws(salahDone, selectedMonth, qafilaType);
   const duasByDay = collectCompletedDuas(duasDone, selectedMonth, qafilaType);
+  const expenseSummary = computeExpenseSummary(brothers, expenses);
 
   const activityCount = Object.values(activitiesByDay).reduce((s, arr) => s + arr.length, 0);
   const sunnahCount = Object.values(sunnahsByDay).reduce((s, arr) => s + arr.length, 0);
@@ -145,6 +148,10 @@ export function buildReportSummary({
     brothers,
     qafilaType,
     selectedMonth,
+    expenses,
+    expenseSummary,
+    expenseTotal: expenseSummary.total,
+    expenseCount: expenses.length,
   };
 }
 
@@ -157,6 +164,7 @@ export function generateReportPdf({
   sunnahsDone,
   duasDone,
   salahDone,
+  expenses = [],
 }) {
   const summary = buildReportSummary({
     journey,
@@ -167,6 +175,7 @@ export function generateReportPdf({
     sunnahsDone,
     duasDone,
     salahDone,
+    expenses,
   });
 
   const doc = new jsPDF({ unit: "mm", format: "a4" });
@@ -214,7 +223,12 @@ export function generateReportPdf({
   }
   const dateRange = `${formatDate(journey.startDate)} – ${formatDate(journey.endDate)}`;
   doc.text(`Dates: ${dateRange}`, 14, y);
-  y += 10;
+  y += 5;
+  if (journey.ameerName) {
+    doc.text(`Ameer: ${journey.ameerName}${journey.ameerPhone ? ` (${journey.ameerPhone})` : ""}`, 14, y);
+    y += 5;
+  }
+  y += 5;
 
   y = addSectionTitle(doc, y, "Brothers Who Travelled");
   if (brothers.length === 0) {
@@ -336,6 +350,86 @@ export function generateReportPdf({
       });
       y = doc.lastAutoTable.finalY + 8;
     });
+  }
+
+  y = ensureSpace(doc, y, 30);
+  y = addSectionTitle(doc, y, "Expenses");
+
+  if (!expenses.length) {
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "italic");
+    doc.text("No expenses recorded.", 14, y);
+    y += 10;
+  } else {
+    const sortedExpenses = [...expenses].sort((a, b) => new Date(b.date) - new Date(a.date));
+    autoTable(doc, {
+      startY: y,
+      head: [["Date", "Description", "Category", "Paid by", "Amount"]],
+      body: sortedExpenses.map((e) => [
+        e.date,
+        e.desc,
+        CAT_LABELS[e.cat] || e.cat,
+        e.payer,
+        `£${e.amount.toFixed(2)}`,
+      ]),
+      styles: { fontSize: 8, cellPadding: 2 },
+      headStyles: { fillColor: [127, 212, 160] },
+      margin: { left: 14, right: 14 },
+    });
+    y = doc.lastAutoTable.finalY + 6;
+
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "bold");
+    doc.text(`Total spent: £${summary.expenseSummary.total.toFixed(2)}`, 14, y);
+    y += 8;
+
+    if (brothers.length) {
+      y = ensureSpace(doc, y, 25);
+      doc.setFontSize(10);
+      doc.setFont("helvetica", "bold");
+      doc.text("Per-brother summary (equal split)", 14, y);
+      y += 4;
+      autoTable(doc, {
+        startY: y,
+        head: [["Brother", "Paid", "Should pay", "Balance"]],
+        body: brothers.map((b) => [
+          b,
+          `£${(summary.expenseSummary.paid[b] || 0).toFixed(2)}`,
+          `£${(summary.expenseSummary.shouldPay[b] || 0).toFixed(2)}`,
+          `£${(summary.expenseSummary.balance[b] || 0).toFixed(2)}`,
+        ]),
+        styles: { fontSize: 8, cellPadding: 2 },
+        headStyles: { fillColor: [127, 212, 160] },
+        margin: { left: 14, right: 14 },
+      });
+      y = doc.lastAutoTable.finalY + 8;
+
+      y = ensureSpace(doc, y, 20);
+      doc.setFontSize(10);
+      doc.setFont("helvetica", "bold");
+      doc.text("Payments needed", 14, y);
+      y += 4;
+      if (!summary.expenseSummary.transactions.length) {
+        doc.setFont("helvetica", "italic");
+        doc.setFontSize(10);
+        doc.text("All settled.", 14, y);
+        y += 8;
+      } else {
+        autoTable(doc, {
+          startY: y,
+          head: [["From", "To", "Amount"]],
+          body: summary.expenseSummary.transactions.map((t) => [
+            t.from,
+            t.to,
+            `£${t.amount.toFixed(2)}`,
+          ]),
+          styles: { fontSize: 8, cellPadding: 2 },
+          headStyles: { fillColor: [127, 212, 160] },
+          margin: { left: 14, right: 14 },
+        });
+        y = doc.lastAutoTable.finalY + 8;
+      }
+    }
   }
 
   const pageHeight = doc.internal.pageSize.getHeight();

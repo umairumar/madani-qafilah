@@ -16,7 +16,11 @@ export const DEFAULT_JOURNEY = {
   venueAddress: "",
   startDate: "",
   endDate: "",
+  ameerName: "",
+  ameerPhone: "",
 };
+
+export const RESET_EVENT = "qf-reset";
 
 export function load(key, fallback) {
   try {
@@ -35,4 +39,18 @@ export function save(key, val) {
 
 export function monthDayKey(month, day) {
   return `${month}-${day}`;
+}
+
+export function clearTripData() {
+  Object.values(STORAGE_KEYS).forEach((key) => {
+    try {
+      localStorage.removeItem(key);
+    } catch {}
+  });
+}
+
+export function clearExpensesOnly() {
+  try {
+    localStorage.removeItem(STORAGE_KEYS.EXPENSES);
+  } catch {}
 }

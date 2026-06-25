@@ -1,13 +1,22 @@
 import { useState, useEffect } from "react";
-import { STORAGE_KEYS, load, save } from "./storage";
+import { STORAGE_KEYS, load, save, clearExpensesOnly, RESET_EVENT } from "./storage";
+import { computeExpenseSummary, CAT_LABELS } from "./expenseUtils";
 
 const CAT_COLORS = {
-  food: { bg: "#EAF3DE", color: "#27500A", label: "Food" },
-  travel: { bg: "#E6F1FB", color: "#0C447C", label: "Travel" },
-  accommodation: { bg: "#EEEDFE", color: "#3C3489", label: "Accommodation" },
-  misc: { bg: "#F1EFE8", color: "#444441", label: "Misc" },
-  other: { bg: "#FAEEDA", color: "#633806", label: "Other" },
+  food: { bg: "#EAF3DE", color: "#27500A", label: CAT_LABELS.food },
+  travel: { bg: "#E6F1FB", color: "#0C447C", label: CAT_LABELS.travel },
+  accommodation: { bg: "#EEEDFE", color: "#3C3489", label: CAT_LABELS.accommodation },
+  misc: { bg: "#F1EFE8", color: "#444441", label: CAT_LABELS.misc },
+  other: { bg: "#FAEEDA", color: "#633806", label: CAT_LABELS.other },
 };
+
+function reloadFromStorage() {
+  return {
+    qafilaName: load(STORAGE_KEYS.NAME, ""),
+    brothers: load(STORAGE_KEYS.BROTHERS, []),
+    expenses: load(STORAGE_KEYS.EXPENSES, []),
+  };
+}
 
 export default function ExpenseManager() {
   const [tab, setTab] = useState("brothers");
@@ -29,6 +38,20 @@ export default function ExpenseManager() {
   useEffect(() => { save(STORAGE_KEYS.BROTHERS, brothers); }, [brothers]);
   useEffect(() => { save(STORAGE_KEYS.EXPENSES, expenses); }, [expenses]);
   useEffect(() => { save(STORAGE_KEYS.NAME, qafilaName); }, [qafilaName]);
+
+  useEffect(() => {
+    const onReset = () => {
+      const data = reloadFromStorage();
+      setQafilaName(data.qafilaName);
+      setBrothers(data.brothers);
+      setExpenses(data.expenses);
+      setContributions({});
+      setSettleResult(null);
+      setExpPayer("");
+    };
+    window.addEventListener(RESET_EVENT, onReset);
+    return () => window.removeEventListener(RESET_EVENT, onReset);
+  }, []);
 
   const addBrother = () => {
     const name = brotherInput.trim();
@@ -65,34 +88,17 @@ export default function ExpenseManager() {
 
   const calculateSettle = () => {
     if (!brothers.length || !expenses.length) return;
-    let customTotal = 0;
-    const contrib = {};
-    brothers.forEach(b => {
-      const v = parseFloat(contributions[b] || 0);
-      contrib[b] = isNaN(v) || v === 0 ? null : v;
-      if (contrib[b]) customTotal += contrib[b];
-    });
-    const unset = brothers.filter(b => contrib[b] === null);
-    const remaining = Math.max(0, total - customTotal);
-    const equalShare = unset.length ? remaining / unset.length : 0;
-    const shouldPay = {};
-    brothers.forEach(b => { shouldPay[b] = contrib[b] !== null ? contrib[b] : +equalShare.toFixed(2); });
-    const balance = {};
-    brothers.forEach(b => { balance[b] = +(((paid[b] || 0) - shouldPay[b]).toFixed(2)); });
-    const creditors = brothers.filter(b => balance[b] > 0.005).map(b => ({ name: b, amount: balance[b] })).sort((a, b) => b.amount - a.amount);
-    const debtors = brothers.filter(b => balance[b] < -0.005).map(b => ({ name: b, amount: -balance[b] })).sort((a, b) => b.amount - a.amount);
-    const transactions = [];
-    const cred = creditors.map(c => ({ ...c }));
-    const debt = debtors.map(d => ({ ...d }));
-    let ci = 0, di = 0;
-    while (ci < cred.length && di < debt.length) {
-      const pay = Math.min(cred[ci].amount, debt[di].amount);
-      if (pay > 0.005) transactions.push({ from: debt[di].name, to: cred[ci].name, amount: +pay.toFixed(2) });
-      cred[ci].amount -= pay; debt[di].amount -= pay;
-      if (cred[ci].amount < 0.005) ci++;
-      if (debt[di].amount < 0.005) di++;
-    }
-    setSettleResult({ shouldPay, balance, transactions, paid });
+    const result = computeExpenseSummary(brothers, expenses, contributions);
+    setSettleResult(result);
+  };
+
+  const resetExpenses = () => {
+    if (!expenses.length) return;
+    if (!window.confirm("Delete all expense records? Journey and schedule progress will be kept.")) return;
+    clearExpensesOnly();
+    setExpenses([]);
+    setContributions({});
+    setSettleResult(null);
   };
 
   const tabs = [
@@ -323,6 +329,26 @@ export default function ExpenseManager() {
               </div>
             </div>
           )}
+
+          <button
+            type="button"
+            onClick={resetExpenses}
+            disabled={!expenses.length}
+            style={{
+              width: "100%",
+              marginTop: 12,
+              background: "transparent",
+              border: "1px solid #4a2a2a",
+              borderRadius: 8,
+              padding: "10px",
+              color: expenses.length ? "#f08080" : "#556",
+              fontWeight: 600,
+              cursor: expenses.length ? "pointer" : "not-allowed",
+              fontSize: 12,
+            }}
+          >
+            Reset all expenses
+          </button>
         </div>
       )}
     </div>
