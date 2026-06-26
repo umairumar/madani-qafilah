@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import ExpenseManager from "./ExpenseManager";
 import DutiesTab from "./DutiesTab";
+import UpcomingQafilasTab from "./UpcomingQafilasTab";
 import {
   ISLAMIC_MONTHS,
   MONTHLY_SUNNAHS,
@@ -266,6 +267,7 @@ export default function App() {
     ["salah", "🙏 Salah"],
     ["duties", "📌 Duties"],
     ["expenses", "💰 Expenses"],
+    ["upcoming", "✈️ Upcoming"],
     ["report", "📄 PDF"],
   ];
 
@@ -895,6 +897,9 @@ export default function App() {
             <ExpenseManager />
           </div>
         )}
+
+        {/* ── UPCOMING QAFILAS TAB ── */}
+        {tab === "upcoming" && <UpcomingQafilasTab />}
 
         <div style={{ textAlign: "center", marginTop: 18, fontSize: 10, color: "#556", lineHeight: 1.9 }}>
           Based on "Path to Piety" (Nayk Bannay aur Bananay kay Tareeqay)<br />
