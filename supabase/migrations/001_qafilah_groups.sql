@@ -155,8 +155,8 @@ BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM public.rsvps WHERE event_id = p_event_id AND user_id = v_user_id
   ) THEN
-    INSERT INTO public.rsvps (event_id, user_id, name, email)
-    VALUES (p_event_id, v_user_id, v_user_name, COALESCE(v_user_email, ''));
+    INSERT INTO public.rsvps (event_id, user_id, name, email, organizer_updates_consent)
+    VALUES (p_event_id, v_user_id, v_user_name, COALESCE(v_user_email, ''), false);
   END IF;
 
   SELECT id INTO v_group_id FROM public.qafilah_groups WHERE event_id = p_event_id;

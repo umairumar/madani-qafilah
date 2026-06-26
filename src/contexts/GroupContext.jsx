@@ -136,6 +136,7 @@ export function GroupProvider({ children }) {
   }, [loadMyGroups, isSignedIn]);
 
   const activateGroup = useCallback(async (groupId) => {
+    if (!groupId) throw new Error("Could not open group. Please try again.");
     setLoadingGroup(true);
     try {
       const bundle = await fetchGroupBundle(groupId);

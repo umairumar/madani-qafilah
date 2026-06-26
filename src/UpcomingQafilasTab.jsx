@@ -1,7 +1,7 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useAuth } from "./contexts/AuthContext";
 import { useGroup } from "./contexts/GroupContext";
-import AuthPanel from "./components/AuthPanel";
+import { setJoinParam } from "./lib/joinFlow";
 
 const GATHER_UMMAH_BASE = "https://gatherummah.com";
 const TRAVEL_LISTING_URL = `${GATHER_UMMAH_BASE}/events/category/travel`;
@@ -38,15 +38,16 @@ async function fetchUpcomingTravelEvents() {
   return data || [];
 }
 
-export default function UpcomingQafilasTab({ onJoined }) {
-  const { isSignedIn } = useAuth();
+export default function UpcomingQafilasTab({ onJoined, onRequireAuth }) {
+  const { isSignedIn, loading: authLoading } = useAuth();
   const { joinGroup } = useGroup();
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [joiningId, setJoiningId] = useState(null);
-  const [authEventId, setAuthEventId] = useState(null);
   const [joinError, setJoinError] = useState(null);
+  const [joinSuccess, setJoinSuccess] = useState(null);
+  const errorRef = useRef(null);
 
   const loadEvents = useCallback(async () => {
     setLoading(true);
@@ -66,30 +67,40 @@ export default function UpcomingQafilasTab({ onJoined }) {
     loadEvents();
   }, [loadEvents]);
 
+  const showJoinError = (message) => {
+    setJoinError(message);
+    setJoinSuccess(null);
+    requestAnimationFrame(() => {
+      errorRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    });
+  };
+
   const handleJoin = async (eventId) => {
     setJoinError(null);
-    if (!isSignedIn) {
-      setAuthEventId(eventId);
+    setJoinSuccess(null);
+
+    if (authLoading) {
+      showJoinError("Checking sign-in status… try again in a moment.");
       return;
     }
+
+    if (!isSignedIn) {
+      setJoinParam(eventId);
+      onRequireAuth?.(eventId);
+      return;
+    }
+
     setJoiningId(eventId);
     try {
       await joinGroup(eventId);
+      setJoinSuccess("Joined! Opening your group journey…");
       onJoined?.();
     } catch (err) {
-      setJoinError(err.message || "Could not join this Qafilah group.");
+      showJoinError(err.message || "Could not join this Qafilah group.");
     } finally {
       setJoiningId(null);
     }
   };
-
-  useEffect(() => {
-    if (isSignedIn && authEventId) {
-      const id = authEventId;
-      setAuthEventId(null);
-      handleJoin(id);
-    }
-  }, [isSignedIn, authEventId]);
 
   return (
     <div>
@@ -106,7 +117,7 @@ export default function UpcomingQafilasTab({ onJoined }) {
           <div>
             <div style={{ fontSize: 12, fontWeight: 700, color: "#d4af7a", marginBottom: 4 }}>Upcoming Qafilas</div>
             <div style={{ fontSize: 11, color: "#8899aa", lineHeight: 1.5 }}>
-              Tap <strong style={{ color: "#c8d0dc" }}>I'm going</strong> to RSVP and join the private coordination group for that trip.
+              Tap <strong style={{ color: "#c8d0dc" }}>I'm going</strong> to sign in (if needed), RSVP, and join the private coordination group for that trip.
             </div>
           </div>
           <button
@@ -130,18 +141,41 @@ export default function UpcomingQafilasTab({ onJoined }) {
         </div>
       </div>
 
-      {authEventId && !isSignedIn && (
-        <div style={{ marginBottom: 14 }}>
-          <AuthPanel
-            title="Sign in to join this Qafilah"
-            onDismiss={() => setAuthEventId(null)}
-          />
-        </div>
-      )}
+      <div ref={errorRef}>
+        {joinError && (
+          <div
+            style={{
+              fontSize: 12,
+              color: "#f08080",
+              marginBottom: 12,
+              lineHeight: 1.5,
+              background: "#1a1010",
+              border: "1px solid #4a2a2a",
+              borderRadius: 10,
+              padding: "10px 12px",
+            }}
+          >
+            {joinError}
+          </div>
+        )}
 
-      {joinError && (
-        <div style={{ fontSize: 11, color: "#f08080", marginBottom: 12, lineHeight: 1.5 }}>{joinError}</div>
-      )}
+        {joinSuccess && (
+          <div
+            style={{
+              fontSize: 12,
+              color: "#7fd4a0",
+              marginBottom: 12,
+              lineHeight: 1.5,
+              background: "#0d1f14",
+              border: "1px solid #2a4a2a",
+              borderRadius: 10,
+              padding: "10px 12px",
+            }}
+          >
+            {joinSuccess}
+          </div>
+        )}
+      </div>
 
       {loading && (
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
@@ -200,20 +234,20 @@ export default function UpcomingQafilasTab({ onJoined }) {
                     <button
                       type="button"
                       onClick={() => handleJoin(event.id)}
-                      disabled={joiningId === event.id}
+                      disabled={joiningId === event.id || authLoading}
                       style={{
                         display: "inline-block",
-                        background: joiningId === event.id ? "#3a3a4a" : "#d4af7a",
-                        color: joiningId === event.id ? "#8899aa" : "#1a1a2e",
+                        background: joiningId === event.id || authLoading ? "#3a3a4a" : "#d4af7a",
+                        color: joiningId === event.id || authLoading ? "#8899aa" : "#1a1a2e",
                         border: "none",
                         borderRadius: 8,
                         padding: "8px 14px",
                         fontSize: 12,
                         fontWeight: 700,
-                        cursor: joiningId === event.id ? "default" : "pointer",
+                        cursor: joiningId === event.id || authLoading ? "default" : "pointer",
                       }}
                     >
-                      {joiningId === event.id ? "Joining…" : "I'm going"}
+                      {joiningId === event.id ? "Joining…" : authLoading ? "Loading…" : "I'm going"}
                     </button>
                     <a href={eventUrl(event.id)} target="_blank" rel="noopener noreferrer" style={{ fontSize: 11, color: "#7aa0d4", fontWeight: 600, textDecoration: "none" }}>
                       View on Gather Ummah

@@ -164,17 +164,18 @@ export default function App() {
         await joinGroup(pendingJoinEventId);
         setTab("journey");
       } catch (err) {
-        console.error(err);
+        window.alert(err.message || "Could not join this Qafilah group.");
       } finally {
         clearJoinParam();
         setPendingJoinEventId(null);
+        setShowAuthPanel(false);
       }
     })();
   }, [pendingJoinEventId, isSignedIn, authLoading, joinGroup]);
 
   useEffect(() => {
-    if (isSignedIn && showAuthPanel) setShowAuthPanel(false);
-  }, [isSignedIn, showAuthPanel]);
+    if (isSignedIn && showAuthPanel && !pendingJoinEventId) setShowAuthPanel(false);
+  }, [isSignedIn, showAuthPanel, pendingJoinEventId]);
 
   const handleSignOut = async () => {
     switchToSolo();
@@ -1102,7 +1103,15 @@ export default function App() {
         )}
 
         {/* ── UPCOMING QAFILAS TAB ── */}
-        {tab === "upcoming" && <UpcomingQafilasTab onJoined={() => setTab("journey")} />}
+        {tab === "upcoming" && (
+          <UpcomingQafilasTab
+            onJoined={() => setTab("journey")}
+            onRequireAuth={(eventId) => {
+              setPendingJoinEventId(eventId);
+              setShowAuthPanel(true);
+            }}
+          />
+        )}
 
         <div style={{ textAlign: "center", marginTop: 18, fontSize: 10, color: "#556", lineHeight: 1.9 }}>
           Based on "Path to Piety" (Nayk Bannay aur Bananay kay Tareeqay)<br />
@@ -1138,8 +1147,12 @@ export default function App() {
         >
           <div style={{ maxWidth: 400, width: "100%" }}>
             <AuthPanel
-              title="Sign in to join your Qafilah"
-              onDismiss={() => setShowAuthPanel(false)}
+              title={pendingJoinEventId ? "Sign in to join this Qafilah" : "Sign in to join your Qafilah"}
+              onDismiss={() => {
+                setShowAuthPanel(false);
+                setPendingJoinEventId(null);
+                clearJoinParam();
+              }}
             />
           </div>
         </div>

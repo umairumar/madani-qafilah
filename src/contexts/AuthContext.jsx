@@ -35,7 +35,7 @@ export function AuthProvider({ children }) {
   }, [loadProfile]);
 
   const signInWithEmail = async (email) => {
-    const redirectTo = window.location.origin + window.location.pathname;
+    const redirectTo = window.location.origin + window.location.pathname + window.location.search;
     const { error } = await supabase.auth.signInWithOtp({
       email,
       options: { emailRedirectTo: redirectTo },
