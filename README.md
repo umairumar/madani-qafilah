@@ -22,7 +22,19 @@ www.dawateislami.net
 
 ## Tech Stack
 - React + Vite
+- Supabase (Gather Ummah auth + Qafilah groups)
 - Deployed on Vercel
+
+## Gather Ummah integration
+
+Qafilah groups use the same Supabase project as [Gather Ummah](https://gatherummah.com). Sign in with the same email to join private per-event groups, sync journey/expenses/schedule with your brothers, and RSVP from the Upcoming tab.
+
+**Supabase Auth redirect URLs** (one-time dashboard setup):
+
+- `https://qafilah.app`
+- `http://localhost:5173`
+
+Copy `.env.example` to `.env` if you need to override the default public Supabase credentials.
 
 ## Getting Started
 

@@ -19,11 +19,23 @@ function reloadFromStorage() {
   };
 }
 
-export default function ExpenseManager() {
+export default function ExpenseManager({
+  brothers: controlledBrothers,
+  setBrothers: setControlledBrothers,
+  expenses: controlledExpenses,
+  setExpenses: setControlledExpenses,
+  journey: controlledJourney,
+  brothersReadOnly = false,
+}) {
   const [tab, setTab] = useState("brothers");
   const [qafilaName, setQafilaName] = useState(() => load(STORAGE_KEYS.NAME, ""));
-  const [brothers, setBrothers] = useState(() => load(STORAGE_KEYS.BROTHERS, []));
-  const [expenses, setExpenses] = useState(() => load(STORAGE_KEYS.EXPENSES, []));
+  const [localBrothers, setLocalBrothers] = useState(() => load(STORAGE_KEYS.BROTHERS, []));
+  const [localExpenses, setLocalExpenses] = useState(() => load(STORAGE_KEYS.EXPENSES, []));
+  const brothers = controlledBrothers ?? localBrothers;
+  const setBrothers = setControlledBrothers ?? setLocalBrothers;
+  const expenses = controlledExpenses ?? localExpenses;
+  const setExpenses = setControlledExpenses ?? setLocalExpenses;
+  const isControlled = controlledBrothers != null;
   const [brotherInput, setBrotherInput] = useState("");
 
   const [expDesc, setExpDesc] = useState("");
@@ -36,8 +48,8 @@ export default function ExpenseManager() {
   const [contributions, setContributions] = useState({});
   const [settleResult, setSettleResult] = useState(null);
 
-  useEffect(() => { save(STORAGE_KEYS.BROTHERS, brothers); }, [brothers]);
-  useEffect(() => { save(STORAGE_KEYS.EXPENSES, expenses); }, [expenses]);
+  useEffect(() => { if (!isControlled) save(STORAGE_KEYS.BROTHERS, brothers); }, [brothers, isControlled]);
+  useEffect(() => { if (!isControlled) save(STORAGE_KEYS.EXPENSES, expenses); }, [expenses, isControlled]);
   useEffect(() => { save(STORAGE_KEYS.NAME, qafilaName); }, [qafilaName]);
 
   useEffect(() => {
@@ -96,7 +108,7 @@ export default function ExpenseManager() {
   const canDownloadExpensesPdf = brothers.length > 0 && expenses.length > 0;
 
   const handleDownloadExpensesPdf = () => {
-    const journey = load(STORAGE_KEYS.JOURNEY, {});
+    const journey = controlledJourney ?? load(STORAGE_KEYS.JOURNEY, {});
     generateExpensesPdf({
       journey,
       brothers,
@@ -177,7 +189,10 @@ export default function ExpenseManager() {
               placeholder="e.g. Manchester 3-Day June 2026"
               style={{ width: "100%", background: "#141420", border: "1px solid #2a2a3a", borderRadius: 8, padding: "8px 12px", color: "#e6e6e6", fontSize: 12 }} />
           </div>
-          <div style={{ fontSize: 11, color: "#8899aa", marginBottom: 6 }}>Brothers travelling</div>
+          <div style={{ fontSize: 11, color: "#8899aa", marginBottom: 6 }}>
+            {brothersReadOnly ? "Group members (from your Qafilah group)" : "Brothers travelling"}
+          </div>
+          {!brothersReadOnly && (
           <div style={{ display: "flex", gap: 6, marginBottom: 10 }}>
             <input value={brotherInput} onChange={e => setBrotherInput(e.target.value)}
               onKeyDown={e => e.key === "Enter" && addBrother()}
@@ -188,17 +203,20 @@ export default function ExpenseManager() {
               + Add
             </button>
           </div>
+          )}
           <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
             {brothers.map(b => (
               <div key={b} style={{ display: "flex", alignItems: "center", gap: 6, background: "#141420", border: "1px solid #2a2a3a", borderRadius: 20, padding: "5px 12px", fontSize: 12 }}>
                 <span>{b}</span>
+                {!brothersReadOnly && (
                 <button onClick={() => removeBrother(b)} style={{ border: "none", background: "none", color: "#8899aa", cursor: "pointer", fontSize: 15, lineHeight: 1, padding: 0 }}>×</button>
+                )}
               </div>
             ))}
           </div>
           {brothers.length === 0 && (
             <div style={{ textAlign: "center", color: "#8899aa", fontSize: 12, padding: "2rem 0" }}>
-              Add the brothers joining this Qafilah
+              {brothersReadOnly ? "No group members yet" : "Add the brothers joining this Qafilah"}
             </div>
           )}
         </div>

@@ -2,6 +2,12 @@ import { useState, useEffect, useRef } from "react";
 import ExpenseManager from "./ExpenseManager";
 import DutiesTab from "./DutiesTab";
 import UpcomingQafilasTab from "./UpcomingQafilasTab";
+import MyQafilasTab from "./MyQafilasTab";
+import AuthPanel from "./components/AuthPanel";
+import { useAuth } from "./contexts/AuthContext";
+import { useGroup } from "./contexts/GroupContext";
+import { useTripData } from "./contexts/TripDataContext";
+import { parseJoinEventId, clearJoinParam } from "./lib/joinFlow";
 import {
   ISLAMIC_MONTHS,
   MONTHLY_SUNNAHS,
@@ -13,10 +19,6 @@ import {
   DAY_GUIDES,
 } from "./qafilahData";
 import {
-  STORAGE_KEYS,
-  DEFAULT_JOURNEY,
-  load,
-  save,
   monthDayKey,
   clearTripData,
   RESET_EVENT,
@@ -74,21 +76,50 @@ function formatDisplayDate(iso) {
 
 // ─── APP ──────────────────────────────────────────────────────────────────────
 export default function App() {
+  const { isSignedIn, profile, user, signOut, loading: authLoading } = useAuth();
+  const {
+    isGroupMode,
+    activeEvent,
+    isAdmin,
+    members,
+    joinGroup,
+    switchToSolo,
+    transferAmeer,
+  } = useGroup();
+  const {
+    journey,
+    setJourney,
+    brothers,
+    setBrothers,
+    expenses,
+    setExpenses,
+    checkedItems,
+    setCheckedItems,
+    sunnahsDone,
+    setSunnahsDone,
+    duasDone,
+    setDuasDone,
+    salahDone,
+    setSalahDone,
+    duties,
+    setDuties,
+    qafilaType,
+    setQafilaType,
+    selectedMonth,
+    setSelectedMonth,
+    resetSoloTrip,
+    brothersReadOnly,
+  } = useTripData();
+
   const [tab, setTab] = useState("schedule");
-  const [qafilaType, setQafilaType] = useState(3);
   const [currentDay, setCurrentDay] = useState(1);
-  const [selectedMonth, setSelectedMonth] = useState(ISLAMIC_MONTHS[0]);
   const [expandedSession, setExpandedSession] = useState("fajr");
-  const [checkedItems, setCheckedItems] = useState(() => load(STORAGE_KEYS.CHECKLIST, {}));
-  const [sunnahsDone, setSunnahsDone] = useState(() => load(STORAGE_KEYS.SUNNAHS_DONE, {}));
-  const [duasDone, setDuasDone] = useState(() => load(STORAGE_KEYS.DUAS_DONE, {}));
-  const [salahDone, setSalahDone] = useState(() => load(STORAGE_KEYS.SALAH_DONE, {}));
-  const [duties, setDuties] = useState(() => load(STORAGE_KEYS.DUTIES, {}));
-  const [journey, setJourney] = useState(() => ({ ...DEFAULT_JOURNEY, ...load(STORAGE_KEYS.JOURNEY, {}) }));
-  const [brothers, setBrothers] = useState(() => load(STORAGE_KEYS.BROTHERS, []));
-  const [expenses, setExpenses] = useState(() => load(STORAGE_KEYS.EXPENSES, []));
   const [showMonthPicker, setShowMonthPicker] = useState(false);
   const [legalView, setLegalView] = useState(null);
+  const [showAuthPanel, setShowAuthPanel] = useState(false);
+  const [pendingJoinEventId, setPendingJoinEventId] = useState(null);
+  const [transferTargetId, setTransferTargetId] = useState("");
+  const [transferring, setTransferring] = useState(false);
   const tabsScrollRef = useRef(null);
 
   const scrollTabs = (direction) => {
@@ -118,26 +149,56 @@ export default function App() {
   };
 
   useEffect(() => {
+    const joinId = parseJoinEventId();
+    if (joinId) setPendingJoinEventId(joinId);
+  }, []);
+
+  useEffect(() => {
+    if (!pendingJoinEventId || authLoading) return;
+    if (!isSignedIn) {
+      setShowAuthPanel(true);
+      return;
+    }
+    (async () => {
+      try {
+        await joinGroup(pendingJoinEventId);
+        setTab("journey");
+      } catch (err) {
+        console.error(err);
+      } finally {
+        clearJoinParam();
+        setPendingJoinEventId(null);
+      }
+    })();
+  }, [pendingJoinEventId, isSignedIn, authLoading, joinGroup]);
+
+  useEffect(() => {
+    if (isSignedIn && showAuthPanel) setShowAuthPanel(false);
+  }, [isSignedIn, showAuthPanel]);
+
+  const handleSignOut = async () => {
+    switchToSolo();
+    await signOut();
+  };
+
+  const handleTransferAmeer = async () => {
+    if (!transferTargetId) return;
+    setTransferring(true);
+    try {
+      await transferAmeer(transferTargetId);
+      setTransferTargetId("");
+    } catch (err) {
+      window.alert(err.message || "Could not transfer Ameer role.");
+    } finally {
+      setTransferring(false);
+    }
+  };
+
+  useEffect(() => {
     const el = tabsScrollRef.current;
     if (!el) return;
     const active = el.querySelector(`[data-tab-id="${tab}"]`);
     active?.scrollIntoView({ behavior: "smooth", inline: "nearest", block: "nearest" });
-  }, [tab]);
-
-  useEffect(() => { save(STORAGE_KEYS.CHECKLIST, checkedItems); }, [checkedItems]);
-  useEffect(() => { save(STORAGE_KEYS.SUNNAHS_DONE, sunnahsDone); }, [sunnahsDone]);
-  useEffect(() => { save(STORAGE_KEYS.DUAS_DONE, duasDone); }, [duasDone]);
-  useEffect(() => { save(STORAGE_KEYS.SALAH_DONE, salahDone); }, [salahDone]);
-  useEffect(() => { save(STORAGE_KEYS.DUTIES, duties); }, [duties]);
-  useEffect(() => { save(STORAGE_KEYS.JOURNEY, journey); }, [journey]);
-
-  useEffect(() => {
-    const syncBrothers = () => {
-      setBrothers(load(STORAGE_KEYS.BROTHERS, []));
-      setExpenses(load(STORAGE_KEYS.EXPENSES, []));
-    };
-    window.addEventListener("storage", syncBrothers);
-    return () => window.removeEventListener("storage", syncBrothers);
   }, [tab]);
 
   const updateJourney = (field, value) => setJourney((prev) => ({ ...prev, [field]: value }));
@@ -149,6 +210,10 @@ export default function App() {
   };
 
   const startNewQafilah = () => {
+    if (isGroupMode) {
+      window.alert("Switch to solo mode first if you want to reset a local offline trip.");
+      return;
+    }
     const confirmed = window.confirm(
       "Start a new Qafilah? This will permanently delete:\n\n" +
       "• Journey details\n" +
@@ -158,14 +223,7 @@ export default function App() {
     );
     if (!confirmed) return;
     clearTripData();
-    setJourney({ ...DEFAULT_JOURNEY });
-    setCheckedItems({});
-    setSunnahsDone({});
-    setDuasDone({});
-    setSalahDone({});
-    setDuties({});
-    setBrothers([]);
-    setExpenses([]);
+    resetSoloTrip();
     setCurrentDay(1);
     setTab("journey");
     window.dispatchEvent(new Event(RESET_EVENT));
@@ -268,6 +326,7 @@ export default function App() {
     ["duties", "📌 Duties"],
     ["expenses", "💰 Expenses"],
     ["upcoming", "✈️ Upcoming"],
+    ["myqafilas", "👥 My Qafilas"],
     ["report", "📄 PDF"],
   ];
 
@@ -279,11 +338,96 @@ export default function App() {
         <div style={{ maxWidth: 600, margin: "0 auto" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
             <span style={{ fontSize: 26 }}>🕌</span>
-            <div>
+            <div style={{ flex: 1 }}>
               <div style={{ fontSize: 17, fontWeight: 700, color: "#d4af7a" }}>Madani Qafilah</div>
               <div style={{ fontSize: 10, color: "#8899aa", letterSpacing: 1, textTransform: "uppercase" }}>Path to Piety Companion</div>
             </div>
+            {isSignedIn ? (
+              <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap", justifyContent: "flex-end" }}>
+                <button
+                  type="button"
+                  onClick={() => setTab("myqafilas")}
+                  style={{
+                    background: "#1a1a2e",
+                    border: "1px solid #2a2a4a",
+                    borderRadius: 8,
+                    padding: "5px 10px",
+                    color: "#d4af7a",
+                    fontSize: 10,
+                    fontWeight: 600,
+                    cursor: "pointer",
+                  }}
+                >
+                  My Qafilas
+                </button>
+                <span style={{ fontSize: 10, color: "#8899aa", maxWidth: 100, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  {profile?.display_name || user?.email?.split("@")[0]}
+                </span>
+                <button
+                  type="button"
+                  onClick={handleSignOut}
+                  style={{
+                    background: "transparent",
+                    border: "1px solid #3a3a5a",
+                    borderRadius: 8,
+                    padding: "5px 8px",
+                    color: "#8899aa",
+                    fontSize: 10,
+                    cursor: "pointer",
+                  }}
+                >
+                  Sign out
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setShowAuthPanel(true)}
+                style={{
+                  background: "#d4af7a",
+                  border: "none",
+                  borderRadius: 8,
+                  padding: "6px 12px",
+                  color: "#1a1a2e",
+                  fontSize: 11,
+                  fontWeight: 700,
+                  cursor: "pointer",
+                }}
+              >
+                Sign in
+              </button>
+            )}
           </div>
+
+          {isGroupMode ? (
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginBottom: 10, background: "#1a2a1a", border: "1px solid #2a4a2a", borderRadius: 8, padding: "8px 10px" }}>
+              <div>
+                <div style={{ fontSize: 9, color: "#7fd4a0", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 2 }}>Group trip</div>
+                <div style={{ fontSize: 11, color: "#e6e6e6", fontWeight: 600, lineHeight: 1.3 }}>
+                  {activeEvent?.title || "Qafilah group"}
+                  {isAdmin && <span style={{ color: "#d4af7a" }}> · Ameer</span>}
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={switchToSolo}
+                style={{
+                  background: "transparent",
+                  border: "1px solid #2d4a6b",
+                  borderRadius: 6,
+                  padding: "4px 8px",
+                  color: "#7aa0d4",
+                  fontSize: 10,
+                  cursor: "pointer",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                Solo mode
+              </button>
+            </div>
+          ) : (
+            <div style={{ fontSize: 10, color: "#556677", marginBottom: 10 }}>Solo offline trip — no sign-in required</div>
+          )}
 
           {/* Controls Row */}
           <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center", marginBottom: 2 }}>
@@ -372,7 +516,7 @@ export default function App() {
                   key={id}
                   type="button"
                   data-tab-id={id}
-                  onClick={() => { setTab(id); setBrothers(load(STORAGE_KEYS.BROTHERS, [])); setExpenses(load(STORAGE_KEYS.EXPENSES, [])); }}
+                  onClick={() => setTab(id)}
                   style={{
                     flex: "0 0 auto",
                     padding: "10px 14px",
@@ -420,7 +564,11 @@ export default function App() {
           <div>
             <div style={{ background: "linear-gradient(135deg,#1a2030,#0d1a30)", borderRadius: 12, padding: "12px 14px", marginBottom: 14, border: "1px solid #2a3a4a" }}>
               <div style={{ fontSize: 12, fontWeight: 700, color: "#d4af7a", marginBottom: 4 }}>🚌 Journey Details</div>
-              <div style={{ fontSize: 11, color: "#8899aa" }}>Set where your Qafilah is travelling from and to, plus the venue details for this trip.</div>
+              <div style={{ fontSize: 11, color: "#8899aa" }}>
+                {isGroupMode
+                  ? "Shared with your Qafilah group — changes sync for all members."
+                  : "Set where your Qafilah is travelling from and to, plus the venue details for this trip."}
+              </div>
             </div>
 
             <div style={{ background: "#141420", borderRadius: 12, padding: "14px", border: "1px solid #2a2a3a" }}>
@@ -501,8 +649,45 @@ export default function App() {
                     textDecoration: "none",
                   }}
                 >
-                  Call Ameer{journey.ameerName ? `: ${journey.ameerName}` : ""}
+                  Call Ameer
                 </a>
+              )}
+
+              {isGroupMode && isAdmin && members.filter((m) => m.userId !== user?.id).length > 0 && (
+                <div style={{ marginBottom: 12, padding: "10px", background: "#1a1520", borderRadius: 8, border: "1px solid #3a2a4a" }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: "#d4af7a", marginBottom: 6 }}>Transfer Ameer</div>
+                  <div style={{ fontSize: 10, color: "#8899aa", marginBottom: 8, lineHeight: 1.4 }}>
+                    Choose another group member to become Ameer and admin.
+                  </div>
+                  <select
+                    value={transferTargetId}
+                    onChange={(e) => setTransferTargetId(e.target.value)}
+                    style={{ ...inputStyle, marginBottom: 8 }}
+                  >
+                    <option value="">Select member…</option>
+                    {members.filter((m) => m.userId !== user?.id).map((m) => (
+                      <option key={m.userId} value={m.userId}>{m.displayName}</option>
+                    ))}
+                  </select>
+                  <button
+                    type="button"
+                    onClick={handleTransferAmeer}
+                    disabled={!transferTargetId || transferring}
+                    style={{
+                      width: "100%",
+                      background: transferTargetId && !transferring ? "#d4af7a" : "#3a3a4a",
+                      border: "none",
+                      borderRadius: 8,
+                      padding: "8px",
+                      color: transferTargetId && !transferring ? "#1a1a2e" : "#8899aa",
+                      fontWeight: 700,
+                      fontSize: 11,
+                      cursor: transferTargetId && !transferring ? "pointer" : "not-allowed",
+                    }}
+                  >
+                    {transferring ? "Transferring…" : "Transfer Ameer role"}
+                  </button>
+                </div>
               )}
 
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
@@ -550,20 +735,23 @@ export default function App() {
             <div style={{ background: "#1a1010", borderRadius: 12, padding: "14px", marginTop: 14, border: "1px solid #4a2a2a" }}>
               <div style={{ fontSize: 11, fontWeight: 700, color: "#f08080", marginBottom: 6 }}>Start fresh</div>
               <div style={{ fontSize: 11, color: "#8899aa", marginBottom: 12, lineHeight: 1.5 }}>
-                Clear all journey details, brothers, expenses, and progress to begin a new Qafilah.
+                {isGroupMode
+                  ? "Switch to solo mode to reset your local offline trip. Group data stays in the cloud."
+                  : "Clear all journey details, brothers, expenses, and progress to begin a new Qafilah."}
               </div>
               <button
                 type="button"
                 onClick={startNewQafilah}
+                disabled={isGroupMode}
                 style={{
                   width: "100%",
                   background: "transparent",
                   border: "1px solid #f08080",
                   borderRadius: 8,
                   padding: "10px",
-                  color: "#f08080",
+                  color: isGroupMode ? "#664444" : "#f08080",
                   fontWeight: 700,
-                  cursor: "pointer",
+                  cursor: isGroupMode ? "not-allowed" : "pointer",
                   fontSize: 12,
                 }}
               >
@@ -892,14 +1080,29 @@ export default function App() {
           <div>
             <div style={{ background: "linear-gradient(135deg,#1a2a1a,#0d1a0d)", borderRadius: 12, padding: "12px 14px", marginBottom: 14, border: "1px solid #2a3a2a" }}>
               <div style={{ fontSize: 12, fontWeight: 700, color: "#7fd4a0", marginBottom: 2 }}>💰 Qafilah Expense Manager</div>
-              <div style={{ fontSize: 11, color: "#8899aa" }}>Track shared expenses, set custom contributions per brother, and calculate who owes who. Works fully offline.</div>
+              <div style={{ fontSize: 11, color: "#8899aa" }}>
+                {isGroupMode
+                  ? "Shared expenses with your group — brothers list comes from group members."
+                  : "Track shared expenses, set custom contributions per brother, and calculate who owes who. Works fully offline."}
+              </div>
             </div>
-            <ExpenseManager />
+            <ExpenseManager
+              brothers={brothers}
+              setBrothers={setBrothers}
+              expenses={expenses}
+              setExpenses={setExpenses}
+              journey={journey}
+              brothersReadOnly={brothersReadOnly}
+            />
           </div>
         )}
 
+        {tab === "myqafilas" && (
+          <MyQafilasTab onSwitchGroup={() => setTab("journey")} />
+        )}
+
         {/* ── UPCOMING QAFILAS TAB ── */}
-        {tab === "upcoming" && <UpcomingQafilasTab />}
+        {tab === "upcoming" && <UpcomingQafilasTab onJoined={() => setTab("journey")} />}
 
         <div style={{ textAlign: "center", marginTop: 18, fontSize: 10, color: "#556", lineHeight: 1.9 }}>
           Based on "Path to Piety" (Nayk Bannay aur Bananay kay Tareeqay)<br />
@@ -919,6 +1122,28 @@ export default function App() {
 
       {legalView === "privacy" && <LegalPage document={privacyPolicy} onClose={closeLegal} />}
       {legalView === "terms" && <LegalPage document={termsAndConditions} onClose={closeLegal} />}
+
+      {showAuthPanel && !isSignedIn && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0,0,0,0.75)",
+            zIndex: 200,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: 16,
+          }}
+        >
+          <div style={{ maxWidth: 400, width: "100%" }}>
+            <AuthPanel
+              title="Sign in to join your Qafilah"
+              onDismiss={() => setShowAuthPanel(false)}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }
